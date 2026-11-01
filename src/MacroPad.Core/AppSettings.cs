@@ -18,6 +18,9 @@ public sealed class AppSettings
     /// <summary>Home Assistant actions by trigger code (hex, e.g. "0F23").</summary>
     public Dictionary<string, HaAction> Actions { get; set; } = [];
 
+    /// <summary>The room or light the knob controls, as last picked with a Select key.</summary>
+    public HaTarget? SelectedTarget { get; set; }
+
     /// <summary>Closing the window keeps MacroPad in the tray so pad presses still reach Home Assistant.</summary>
     public bool KeepRunningInTray { get; set; } = true;
 

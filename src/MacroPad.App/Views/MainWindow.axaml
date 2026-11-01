@@ -307,11 +307,11 @@
                                               MaxDropDownHeight="360" PlaceholderText="Connect to Home Assistant first, then pick an area or light" />
                                 </StackPanel>
                                 <StackPanel Spacing="6" IsVisible="{Binding IsStepped}">
-                                    <TextBlock Text="STEP (%)" Classes="heading" />
-                                    <NumericUpDown Value="{Binding HaStep}" Minimum="1" Maximum="100" Increment="5" FormatString="0" Width="130" HorizontalAlignment="Left" />
+                                    <TextBlock Text="STEP PER CLICK (OF 255; GROWS UP TO 8× WHEN TURNED FAST)" Classes="heading" />
+                                    <NumericUpDown Value="{Binding HaStep}" Minimum="1" Maximum="255" Increment="1" FormatString="0" Width="130" HorizontalAlignment="Left" />
                                 </StackPanel>
                                 <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.6"
-                                           Text="The pad sends a code your computer ignores, and MacroPad turns it into the Home Assistant action. Toggle on an area works like a wall switch: if any light is on, all go off. Brighter and Dimmer suit the knob's turns." />
+                                           Text="The pad sends a code your computer ignores, and MacroPad turns it into the Home Assistant action. Select makes a room the one the knob controls (pick 'Selected room' as the knob's target). Toggle on an area works like a wall switch: if any light is on, all go off. Turning the knob fast takes bigger steps, like mouse acceleration." />
                             </StackPanel>
 
                             <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.6"

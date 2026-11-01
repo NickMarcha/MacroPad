@@ -25,7 +25,7 @@ public partial class SlotViewModel : ViewModelBase
     public static IReadOnlyList<HaCommand> HaCommands { get; } = Enum.GetValues<HaCommand>();
 
     /// <summary>Areas and lights from Home Assistant, filled in by the main view model when it connects.</summary>
-    public static ObservableCollection<HaTarget> HaTargets { get; } = [];
+    public static ObservableCollection<HaTarget> HaTargets { get; } = [HaTarget.Selected];
 
     public static IReadOnlyList<Choice<ushort>> MediaChoices { get; } =
         Usages.Media.Select(m => new Choice<ushort>(m.Key, m.Value)).ToList();
@@ -65,7 +65,7 @@ public partial class SlotViewModel : ViewModelBase
     // Home Assistant
     [ObservableProperty, NotifyPropertyChangedFor(nameof(IsStepped))] public partial HaCommand HaCommand { get; set; }
     [ObservableProperty] public partial HaTarget? HaTarget { get; set; }
-    [ObservableProperty] public partial decimal HaStep { get; set; } = 10;
+    [ObservableProperty] public partial decimal HaStep { get; set; } = 5;
     public bool IsStepped => HaCommand is HaCommand.Brighter or HaCommand.Dimmer;
 
     public HaAction? HaAction => Kind == BindingKind.HomeAssistant && HaTarget is not null
@@ -136,7 +136,7 @@ public partial class SlotViewModel : ViewModelBase
                     if (!HaTargets.Contains(action.Target)) HaTargets.Add(action.Target);
                     HaCommand = action.Command;
                     HaTarget = action.Target;
-                    HaStep = action.StepPercent;
+                    HaStep = action.Step;
                 }
                 break;
             case MediaBinding m:

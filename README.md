@@ -15,7 +15,8 @@ this app running.
     the steps by pressing keys, or pick keys by name (F13–F24, or keys the OS grabs);
   - a media key (volume, play/pause, next track, …);
   - a mouse click, wheel or move, with modifiers held;
-  - a **Home Assistant** action: toggle, turn on or off, or step the brightness of an area or a single light.
+  - a **Home Assistant** action: toggle, turn on or off, or step the brightness of an area or a single light, or
+    *select* a room for the knob to control.
 - Sets the lights per layer (mode and color).
 - Runs in the tray (optionally from login) so pad presses reach Home Assistant without the window open.
 
@@ -83,7 +84,13 @@ for each code lives in MacroPad's settings, so Home Assistant actions only work 
 tray, and tick *Start at login*.
 
 *Toggle* on an area works like a wall switch: if any light in it is on, all go off; otherwise all go on. *Brighter*
-and *Dimmer* step the brightness by a percentage and suit the knob's turns.
+and *Dimmer* step the brightness in Home Assistant's units (1 = 1/255 of full, the finest a light takes; 5 by
+default). Knob turns accelerate like a mouse pointer: a single click moves the set step, and quick clicks in the
+same direction move up to 8 times as much. Dimming to zero turns the light off.
+
+A room picker setup, for example: keys 1–3 *Select* Office, Living Room and Bedroom; the knob's press is *Toggle*
+and its turns *Dimmer* and *Brighter*, all on the target *Selected room*. The keys then only choose which room the knob
+works on (MacroPad remembers the choice across restarts).
 
 Settings are in `%APPDATA%\MacroPad\settings.json` (Windows) or `~/.config/macropad/settings.json` (Linux). The
 token is encrypted for your Windows user; on Linux the file is readable only by you.

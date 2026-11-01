@@ -5,30 +5,50 @@ using System.Text.Json.Serialization;
 
 namespace MacroPad.Core.HomeAssistant;
 
-public enum HaCommand { Toggle, TurnOn, TurnOff, Brighter, Dimmer }
+/// <summary>Select only remembers a target for actions on <see cref="HaTarget.Selected"/> (the knob); it calls nothing.</summary>
+public enum HaCommand { Select, Toggle, TurnOn, TurnOff, Brighter, Dimmer }
 
 [JsonConverter(typeof(JsonStringEnumConverter<HaTargetKind>))]
-public enum HaTargetKind { Area, Light }
+public enum HaTargetKind { Area, Light, Selected }
 
-/// <summary>What an action works on: every light in an area, or one light.</summary>
+/// <summary>What an action works on: every light in an area, one light, or whichever a Select action picked last.</summary>
 public sealed record HaTarget(HaTargetKind Kind, string Id, string Name)
 {
-    public override string ToString() => Kind == HaTargetKind.Area ? $"{Name} (area)" : Name;
+    public static readonly HaTarget Selected = new(HaTargetKind.Selected, "", "the selected room");
+
+    public override string ToString() => Kind switch
+    {
+        HaTargetKind.Area => $"{Name} (area)",
+        HaTargetKind.Selected => "Selected room (picked with a Select key)",
+        _ => Name,
+    };
 }
 
-/// <summary>What a pad slot does in Home Assistant.</summary>
+/// <summary>
+/// What a pad slot does in Home Assistant. <paramref name="Step"/> is for Brighter and Dimmer, in Home Assistant's
+/// brightness units: 1 is 1/255 of full brightness, the finest step a light can take.
+/// </summary>
 public sealed record HaAction(
     [property: JsonConverter(typeof(JsonStringEnumConverter<HaCommand>))] HaCommand Command,
     HaTarget Target,
-    int StepPercent = 10)
+    int Step = 5)
 {
-    public string Describe() => Command switch
+    public const int MaxStep = 255;
+
+    public string Describe()
     {
+        var text = Words();
+        return char.ToUpperInvariant(text[0]) + text[1..];
+    }
+
+    string Words() => Command switch
+    {
+        HaCommand.Select => $"Knob controls {Target.Name}",
         HaCommand.Toggle => $"Toggle {Target.Name}",
         HaCommand.TurnOn => $"Turn on {Target.Name}",
         HaCommand.TurnOff => $"Turn off {Target.Name}",
-        HaCommand.Brighter => $"{Target.Name} +{StepPercent}%",
-        HaCommand.Dimmer => $"{Target.Name} −{StepPercent}%",
+        HaCommand.Brighter => $"{Target.Name} brighter ({Step}/255)",
+        HaCommand.Dimmer => $"{Target.Name} dimmer ({Step}/255)",
         _ => Command.ToString(),
     };
 }
@@ -96,9 +116,12 @@ public sealed class HomeAssistantClient(HttpClient http, Uri baseUrl, string tok
         return targets;
     }
 
+    /// <summary>Runs an action on an area or a light. Select and the Selected target are resolved by the caller.</summary>
     public async Task RunAsync(HaAction action, CancellationToken cancel = default)
     {
         var target = action.Target;
+        if (action.Command == HaCommand.Select || target.Kind == HaTargetKind.Selected)
+            throw new ArgumentException("Select actions and the selected target are resolved before calling Home Assistant.", nameof(action));
         string service;
         var data = new JsonObject();
         switch (action.Command)
@@ -120,7 +143,9 @@ public sealed class HomeAssistantClient(HttpClient http, Uri baseUrl, string tok
             case HaCommand.Brighter:
             case HaCommand.Dimmer:
                 service = "turn_on";
-                data["brightness_step_pct"] = action.Command == HaCommand.Brighter ? action.StepPercent : -action.StepPercent;
+                // Dimming to 0 turns the light off; brightening a light that is off starts it from 0.
+                var step = Math.Clamp(action.Step, 1, HaAction.MaxStep);
+                data["brightness_step"] = action.Command == HaCommand.Brighter ? step : -step;
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(action));

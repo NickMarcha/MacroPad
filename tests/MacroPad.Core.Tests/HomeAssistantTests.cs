@@ -69,9 +69,46 @@ public class HomeAssistantTests
         await Client(fake).RunAsync(new HaAction(HaCommand.Dimmer, Panel, 10));
         var (line, body, auth) = fake.Requests.Single();
         Assert.Equal("POST /api/services/light/turn_on", line);
-        Assert.Contains("\"brightness_step_pct\":-10", body);
+        Assert.Contains("\"brightness_step\":-10", body);
         Assert.Contains("\"entity_id\":\"light.living_panel\"", body);
         Assert.Equal("Bearer t0ken", auth);
+    }
+
+    [Fact]
+    public async Task Finest_step_is_one_brightness_unit()
+    {
+        var fake = new Recorder("");
+        await Client(fake).RunAsync(new HaAction(HaCommand.Brighter, Panel, 1));
+        Assert.Contains("\"brightness_step\":1,", fake.Requests.Single().Body);
+    }
+
+    [Fact]
+    public async Task Select_and_the_selected_target_never_reach_home_assistant()
+    {
+        var fake = new Recorder("");
+        await Assert.ThrowsAsync<ArgumentException>(() => Client(fake).RunAsync(new HaAction(HaCommand.Select, Office)));
+        await Assert.ThrowsAsync<ArgumentException>(() => Client(fake).RunAsync(new HaAction(HaCommand.Toggle, HaTarget.Selected)));
+        Assert.Empty(fake.Requests);
+    }
+
+    [Fact]
+    public void Selected_target_survives_a_save()
+    {
+        var path = Path.Combine(Directory.CreateTempSubdirectory("macropad-settings").FullName, "settings.json");
+        new AppSettings { SelectedTarget = Office }.Save(path);
+        Assert.Equal(Office, AppSettings.Load(path).SelectedTarget);
+    }
+
+    [Fact]
+    public void Knob_speeds_up_when_turned_fast()
+    {
+        var accel = new KnobAcceleration();
+        TimeSpan T(int ms) => TimeSpan.FromMilliseconds(ms);
+        Assert.Equal(5, accel.Step(5, 1, T(0)));        // first click
+        Assert.Equal(5, accel.Step(5, 1, T(1000)));     // slow
+        Assert.Equal(25, accel.Step(5, 1, T(1050)));    // 50 ms later: 5x
+        Assert.Equal(40, accel.Step(5, 1, T(1060)));    // very fast: capped at 8x
+        Assert.Equal(5, accel.Step(5, -1, T(1070)));    // changing direction starts slow again
     }
 
     static HomeAssistantClient Client(Recorder fake) => new(new HttpClient(fake), new Uri("https://ha.example/"), "t0ken");

@@ -103,22 +103,92 @@ public partial class MainViewModel
         }
     }
 
+    // Knob turns that arrive while a brightness change is still on its way, summed into the next one.
+    int _pendingStep;
+    HaTarget? _pendingTarget;
+    bool _stepping;
+    readonly KnobAcceleration _acceleration = new();
+    readonly System.Diagnostics.Stopwatch _clock = System.Diagnostics.Stopwatch.StartNew();
+
+    /// <summary>Runs on the UI thread, so the fields above need no locking.</summary>
     async Task OnPadPressedAsync(ushort code)
     {
         if (!Triggers.IsTrigger(code) || Settings.ActionFor(code) is not { } action) return;
+
+        if (action.Command == HaCommand.Select)
+        {
+            if (action.Target.Kind == HaTargetKind.Selected) return;
+            Settings.SelectedTarget = action.Target;
+            SaveSettings();
+            Message = $"Knob controls {action.Target.Name}.";
+            return;
+        }
+
+        var target = action.Target;
+        if (target.Kind == HaTargetKind.Selected)
+        {
+            if (Settings.SelectedTarget is not { } selected)
+            {
+                Message = "No room selected yet: press a Select key first.";
+                return;
+            }
+            target = selected;
+        }
         if (_ha is null)
         {
             Message = $"{action.Describe()}: Home Assistant isn't connected.";
             return;
         }
+
+        if (action.Command is HaCommand.Brighter or HaCommand.Dimmer)
+        {
+            var direction = action.Command == HaCommand.Brighter ? 1 : -1;
+            var delta = direction * _acceleration.Step(action.Step, direction, _clock.Elapsed);
+            if (_stepping && _pendingTarget == target)
+            {
+                _pendingStep += delta;
+                return;
+            }
+            await StepAsync(target, delta);
+            return;
+        }
+
+        await RunAsync(action with { Target = target });
+    }
+
+    async Task StepAsync(HaTarget target, int delta)
+    {
+        _stepping = true;
+        _pendingTarget = target;
         try
         {
-            await _ha.RunAsync(action);
+            while (delta != 0)
+            {
+                var step = Math.Clamp(Math.Abs(delta), 1, HaAction.MaxStep);
+                if (!await RunAsync(new HaAction(delta > 0 ? HaCommand.Brighter : HaCommand.Dimmer, target, step))) break;
+                delta = _pendingStep;
+                _pendingStep = 0;
+            }
+        }
+        finally
+        {
+            _stepping = false;
+            _pendingStep = 0;
+        }
+    }
+
+    async Task<bool> RunAsync(HaAction action)
+    {
+        try
+        {
+            await _ha!.RunAsync(action);
             Message = action.Describe();
+            return true;
         }
         catch (Exception e) when (e is System.Net.Http.HttpRequestException or TaskCanceledException)
         {
             Message = $"{action.Describe()} failed: {e.Message}";
+            return false;
         }
     }
 
