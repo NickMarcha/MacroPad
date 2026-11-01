@@ -1,0 +1,4 @@
+# Lets the logged-in user configure MINI_KEYBOARD-style macropads (no root needed).
+# Installed by the AUR package. By hand: sudo cp 70-macropad.rules /etc/udev/rules.d/ && sudo udevadm control --reload && sudo udevadm trigger
+KERNEL=="hidraw*", ATTRS{idVendor}=="514c", ATTRS{idProduct}=="88[345][0-9]", MODE="0660", TAG+="uaccess"
+KERNEL=="hidraw*", ATTRS{idVendor}=="1189", ATTRS{idProduct}=="88[345][0-9]", MODE="0660", TAG+="uaccess"

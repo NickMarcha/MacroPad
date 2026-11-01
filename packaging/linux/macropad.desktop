@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=MacroPad
+Comment=Configure MINI_KEYBOARD macropads: keys, knob, lights and Home Assistant actions
+Exec=macropad
+Icon=macropad
+Terminal=false
+Categories=Utility;Settings;HardwareSettings;
+Keywords=macropad;keyboard;macro;knob;

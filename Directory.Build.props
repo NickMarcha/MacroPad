@@ -1,0 +1,10 @@
+<Project>
+  <PropertyGroup>
+    <!-- The release workflow stamps the tag's version (-p:Version=1.2.3); local builds are 0.0.0, which the app treats as a
+         development build that never updates itself. -->
+    <Version>0.0.0</Version>
+    <Authors>NickMarcha</Authors>
+    <Product>MacroPad</Product>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+  </PropertyGroup>
+</Project>

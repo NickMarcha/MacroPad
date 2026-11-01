@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/MacroPad.App/MacroPad.App.csproj" />
+    <Project Path="src/MacroPad.Core/MacroPad.Core.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/MacroPad.Core.Tests/MacroPad.Core.Tests.csproj" />
+  </Folder>
+</Solution>
