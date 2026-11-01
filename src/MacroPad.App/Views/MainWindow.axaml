@@ -22,6 +22,23 @@
         <Style Selector="Button.slot.selected">
             <Setter Property="BorderBrush" Value="{DynamicResource SystemAccentColor}" />
         </Style>
+        <Style Selector="Expander.connection">
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        </Style>
+        <Style Selector="Expander.connection /template/ ToggleButton#ExpanderHeader">
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        </Style>
+        <Style Selector="Button.link">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Foreground" Value="{DynamicResource SystemAccentColorLight2}" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+        <Style Selector="Button.link:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
         <Style Selector="TabItem">
             <Setter Property="FontSize" Value="17" />
             <Setter Property="MinHeight" Value="36" />
@@ -348,23 +365,43 @@
                 <ScrollViewer>
                     <StackPanel Margin="16,16,24,24" Spacing="24" MaxWidth="640" HorizontalAlignment="Left">
                         <StackPanel Spacing="8">
-                            <TextBlock Text="HOME ASSISTANT" Classes="heading" />
-                            <TextBox Text="{Binding HaUrl}" PlaceholderText="https://homeassistant.local:8123" />
-                            <TextBox Text="{Binding HaToken}" PasswordChar="•" PlaceholderText="Long-lived access token (kept once saved)" />
-                            <Button Content="Connect" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Command="{Binding ConnectHaCommand}" />
-                            <TextBlock Text="{Binding HaStatus}" TextWrapping="Wrap" FontSize="12" Opacity="0.8" />
+                            <TextBlock Text="CONNECTIONS" Classes="heading" />
                             <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.6"
-                                       Text="Make a token in Home Assistant under your profile, Security, Long-lived access tokens." />
-                        </StackPanel>
+                                       Text="Services MacroPad actions drive. Each one adds its lights or audio controls to the targets a key or the knob can act on." />
 
-                        <StackPanel Spacing="8">
-                            <TextBlock Text="BRAGI (AUDIO)" Classes="heading" />
-                            <TextBox Text="{Binding BragiUrl}" PlaceholderText="https://bragi.example.ts.net" />
-                            <TextBox Text="{Binding BragiKeyInput}" PasswordChar="•" PlaceholderText="API key (kept once saved)" />
-                            <Button Content="Connect" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Command="{Binding ConnectBragiCommand}" />
-                            <TextBlock Text="{Binding BragiStatus}" TextWrapping="Wrap" FontSize="12" Opacity="0.8" />
-                            <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.6"
-                                       Text="Make a key in Bragi's dashboard: the lock button, Security, API connections. Each headset and peer control becomes a target: Toggle mutes, Up and Down turn the volume." />
+                            <Expander Classes="connection">
+                                <Expander.Header>
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Text="Home Assistant · lights" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="1" Text="{Binding HaStatus}" FontSize="12" Opacity="0.7" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="300" />
+                                    </Grid>
+                                </Expander.Header>
+                                <StackPanel Spacing="8">
+                                    <TextBox Text="{Binding HaUrl}" PlaceholderText="https://homeassistant.local:8123" />
+                                    <TextBox Text="{Binding HaToken}" PasswordChar="•" PlaceholderText="Long-lived access token (kept once saved)" />
+                                    <Button Content="Connect" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Command="{Binding ConnectHaCommand}" />
+                                    <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.6"
+                                               Text="Make a token in Home Assistant under your profile, Security, Long-lived access tokens. Areas and lights become targets: Toggle switches them, Up and Down turn the brightness." />
+                                </StackPanel>
+                            </Expander>
+
+                            <Expander Classes="connection">
+                                <Expander.Header>
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Text="Bragi · audio" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="1" Text="{Binding BragiStatus}" FontSize="12" Opacity="0.7" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="300" />
+                                    </Grid>
+                                </Expander.Header>
+                                <StackPanel Spacing="8">
+                                    <TextBox Text="{Binding BragiUrl}" PlaceholderText="https://bragi.example.ts.net" />
+                                    <TextBox Text="{Binding BragiKeyInput}" PasswordChar="•" PlaceholderText="API key (kept once saved)" />
+                                    <Button Content="Connect" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Command="{Binding ConnectBragiCommand}" />
+                                    <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.6"
+                                               Text="Make a key in Bragi's dashboard: the lock button, Security, API connections. Each headset and peer control becomes a target: Toggle mutes, Up and Down turn the volume." />
+                                </StackPanel>
+                            </Expander>
+
+                            <Button Classes="link" Content="Want MacroPad to drive something else? Request a connection" Command="{Binding RequestConnectionCommand}" />
                         </StackPanel>
 
                         <StackPanel Spacing="4">
@@ -428,6 +465,11 @@
                             <TextBlock Text="{Binding UpdateText}" TextWrapping="Wrap" Foreground="Gold"
                                        IsVisible="{Binding UpdateText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
                             <TextBlock FontSize="12" Opacity="0.6" TextWrapping="Wrap"><Run Text="Settings: " /><Run Text="{Binding SettingsPath}" /></TextBlock>
+                            <WrapPanel>
+                                <Button Classes="link" Content="Report a problem" Command="{Binding ReportProblemCommand}" Margin="0,0,16,0" />
+                                <Button Classes="link" Content="Request hardware support" Command="{Binding RequestHardwareCommand}" Margin="0,0,16,0" />
+                                <Button Classes="link" Content="MacroPad on GitHub" Command="{Binding OpenGitHubCommand}" />
+                            </WrapPanel>
                         </StackPanel>
                     </StackPanel>
                 </ScrollViewer>

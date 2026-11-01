@@ -5,7 +5,7 @@ using System.Text.Json.Nodes;
 namespace MacroPad.Core.Bragi;
 
 /// <summary>
-/// Talks to Bragi, a PipeWire audio mixer (its /api/v1/help). Every control of every device is a target:
+/// Talks to Bragi, a PipeWire audio mixer (github.com/NickMarcha/bragi; its server documents the API at /api/v1/help). Every control of every device is a target:
 /// a headset's playback and capture, a peer's outgoing and incoming. A target's id is "kind/key/direction". Volume is
 /// linear gain 0.0–1.5, handled here as percent 0–150; mute is the on/off.
 /// </summary>

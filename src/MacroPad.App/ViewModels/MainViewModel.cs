@@ -107,6 +107,8 @@ public partial class MainViewModel : ViewModelBase, IDisposable
 
     public MainViewModel()
     {
+        // Before any window binds to them: the profile box only picks its selection out of a list that is already full.
+        InitProfiles();
         DeviceList.Local.Changed += (_, _) => Dispatcher.UIThread.Post(() =>
         {
             if (_device is null && !IsBusy) _ = ConnectAsync();

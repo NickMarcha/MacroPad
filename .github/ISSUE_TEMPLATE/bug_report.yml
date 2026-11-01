@@ -1,0 +1,43 @@
+name: Report a problem
+description: Something in MacroPad doesn't work as it should.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what MacroPad did instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: How to make it happen again
+      placeholder: |
+        1. Open Settings
+        2. …
+  - type: input
+    id: version
+    attributes:
+      label: MacroPad version
+      description: Settings → About. Filled in when you open this from the app.
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: System and install
+      description: Windows or Linux (which distribution), and how MacroPad is installed (portable, AUR).
+  - type: input
+    id: pad
+    attributes:
+      label: Macropad
+      description: The USB ID shown at the top of the window (for example 514C:8851), or "none connected".
+  - type: textarea
+    id: log
+    attributes:
+      label: Log (optional)
+      description: |
+        For timing problems with the knob or pop-ups: start MacroPad with MACROPAD_TRACE=1 set, reproduce it,
+        and paste %TEMP%\macropad-trace.log (Windows) or /tmp/macropad-trace.log (Linux). Remove anything private.
+      render: text

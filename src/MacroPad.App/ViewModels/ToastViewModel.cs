@@ -63,7 +63,12 @@ public partial class ToastViewModel : ViewModelBase
         if (level is not null) _level = level;
         _updating = true;
         HasLevel = _level is not null;
-        if (_level is not null)
+        if (_level is null)
+        {
+            // No reading (the service didn't answer): don't leave the previous target's level on show.
+            Detail = "";
+        }
+        else
         {
             MaxPercent = _level.MaxPercent;
             // An off light shows at 0; muted audio keeps showing its volume.

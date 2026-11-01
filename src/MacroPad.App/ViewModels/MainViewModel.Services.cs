@@ -116,7 +116,6 @@ public partial class MainViewModel
     /// <summary>Starts listening to the pad and connects to the services set up before.</summary>
     public async Task StartServicesAsync()
     {
-        InitProfiles();
         _listener.Pressed += code => Dispatcher.UIThread.Post(() => _ = OnPadPressedAsync(code));
         _listener.Start();
         HaUrl = Settings.HomeAssistantUrl ?? "";

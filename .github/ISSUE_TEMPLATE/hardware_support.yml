@@ -1,0 +1,48 @@
+name: Request hardware support
+description: A macropad MacroPad doesn't find or doesn't program correctly.
+labels: [hardware]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        MacroPad speaks the protocol of the "MINI_KEYBOARD" vendor app (docs/protocol.md). Pads that come with that
+        app, or show up with USB vendor ID 1189 or 514C, are the likeliest to work.
+  - type: input
+    id: model
+    attributes:
+      label: The pad
+      description: Its name and a link to where it's sold (keys and knobs, for example "3 keys, 1 knob").
+    validations:
+      required: true
+  - type: input
+    id: usb
+    attributes:
+      label: USB ID
+      description: |
+        Windows: Device Manager → the pad → Properties → Details → Hardware Ids (VID_xxxx&PID_xxxx).
+        Linux: the ID column of `lsusb` (for example 514c:8851).
+    validations:
+      required: true
+  - type: input
+    id: vendor-app
+    attributes:
+      label: Vendor software
+      description: The name of the program that came with it (for example MINI_KEYBOARD.exe), and where it came from.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happens
+      description: Does MacroPad find it? Read its keys? Write them?
+  - type: input
+    id: pad
+    attributes:
+      label: What MacroPad sees
+      description: Filled in when you open this from the app.
+  - type: input
+    id: version
+    attributes:
+      label: MacroPad version
+  - type: input
+    id: os
+    attributes:
+      label: System and install

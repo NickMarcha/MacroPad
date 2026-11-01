@@ -1,0 +1,36 @@
+name: Request a connection
+description: Ask for MacroPad to drive another service, the way it drives Home Assistant and Bragi.
+labels: [connection]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A connection adds the things a service controls (lights, audio controls, scenes, …) as targets that pad keys
+        and the knob can act on. The more of the API you can point to, the quicker it gets done.
+  - type: input
+    id: service
+    attributes:
+      label: Service
+      description: Its name and a link to the project.
+    validations:
+      required: true
+  - type: textarea
+    id: actions
+    attributes:
+      label: What the pad should do with it
+      description: For example "toggle a scene with a key", "turn the volume of X with the knob".
+    validations:
+      required: true
+  - type: textarea
+    id: api
+    attributes:
+      label: Its API
+      description: Links to the API documentation, how it authenticates (token, key, login), and whether it runs locally.
+  - type: input
+    id: version
+    attributes:
+      label: MacroPad version
+  - type: input
+    id: os
+    attributes:
+      label: System and install

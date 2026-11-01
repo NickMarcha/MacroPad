@@ -5,7 +5,7 @@ namespace MacroPad.Core.Tests;
 
 public class BragiTests
 {
-    // Shaped like GET /api/v1/devices on a Bragi server.
+    // Shaped like a real GET /api/v1/devices answer.
     const string Devices = """
         {"devices": [
           {"id": "headset:usb-desk-headset", "kind": "headset", "key": "usb-desk-headset", "name": "Desk Headset", "enabled": true,
