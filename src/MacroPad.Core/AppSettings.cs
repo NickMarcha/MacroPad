@@ -15,11 +15,24 @@ public sealed class AppSettings
     public string? HomeAssistantUrl { get; set; }
     public string? HomeAssistantToken { get; set; }
 
-    /// <summary>Home Assistant actions by trigger code (hex, e.g. "0F23").</summary>
-    public Dictionary<string, HaAction> Actions { get; set; } = [];
+    /// <summary>MacroPad's profiles. The first is the Default every other profile falls back to.</summary>
+    public List<Profile> Profiles { get; set; } = [new Profile()];
+
+    /// <summary>The name of the active profile.</summary>
+    public string? ActiveProfile { get; set; }
+
+    /// <summary>Where on the screen the pop-up appears.</summary>
+    [JsonConverter(typeof(JsonStringEnumConverter<PopupPosition>))]
+    public PopupPosition PopupPosition { get; set; } = PopupPosition.Bottom;
+
+    /// <summary>Global keyboard shortcut for the next profile (Windows), e.g. "Ctrl+Alt+P"; null for none.</summary>
+    public string? NextProfileShortcut { get; set; }
 
     /// <summary>The room or light the knob controls, as last picked with a Select key.</summary>
     public HaTarget? SelectedTarget { get; set; }
+
+    /// <summary>Show a pop-up with the room's brightness after each Home Assistant action.</summary>
+    public bool ShowPopups { get; set; } = true;
 
     /// <summary>Closing the window keeps MacroPad in the tray so pad presses still reach Home Assistant.</summary>
     public bool KeepRunningInTray { get; set; } = true;
@@ -37,12 +50,42 @@ public sealed class AppSettings
 
     public static string FilePath => Path.Combine(Directory, "settings.json");
 
-    public HaAction? ActionFor(ushort code) => Actions.GetValueOrDefault(code.ToString("X4"));
+    public Profile Default => Profiles.Count > 0 ? Profiles[0] : AddDefault();
 
-    public void SetAction(ushort code, HaAction? action)
+    public Profile Active => Profiles.FirstOrDefault(p => p.Name == ActiveProfile) ?? Default;
+
+    Profile AddDefault()
     {
-        if (action is null) Actions.Remove(code.ToString("X4"));
-        else Actions[code.ToString("X4")] = action;
+        var p = new Profile();
+        Profiles.Insert(0, p);
+        return p;
+    }
+
+    public Profile? Find(string? name) => Profiles.FirstOrDefault(p => p.Name == name);
+
+    /// <summary>What a press does now: the active profile's action, else the Default profile's.</summary>
+    public PadAction? ActionFor(ushort code) => ActionFor(Active, code);
+
+    /// <summary>A profile's action for a code, falling back to the Default profile.</summary>
+    public PadAction? ActionFor(Profile profile, ushort code) =>
+        profile.Actions.GetValueOrDefault(Triggers.Key(code)) ?? Default.Actions.GetValueOrDefault(Triggers.Key(code));
+
+    /// <summary>Sets (or with null removes) a profile's own action for a code.</summary>
+    public void SetAction(Profile profile, ushort code, PadAction? action)
+    {
+        if (action is null) profile.Actions.Remove(Triggers.Key(code));
+        else profile.Actions[Triggers.Key(code)] = action;
+    }
+
+    public void SetAction(ushort code, PadAction? action) => SetAction(Default, code, action);
+
+    /// <summary>Makes the profile after the active one active (wrapping round) and returns it.</summary>
+    public Profile NextProfile()
+    {
+        var i = Profiles.IndexOf(Active);
+        var next = Profiles[(i + 1) % Profiles.Count];
+        ActiveProfile = next.Name;
+        return next;
     }
 
     public static AppSettings Load(string? path = null)
@@ -93,6 +136,9 @@ public sealed class AppSettings
         }
     }
 }
+
+/// <summary>The nine places a pop-up can go: corners, edge middles and the centre.</summary>
+public enum PopupPosition { TopLeft, Top, TopRight, Left, Center, Right, BottomLeft, Bottom, BottomRight }
 
 [JsonSerializable(typeof(AppSettings))]
 [JsonSourceGenerationOptions(WriteIndented = true)]

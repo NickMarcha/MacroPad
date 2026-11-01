@@ -9,7 +9,8 @@ using MacroPad.Core.HomeAssistant;
 
 namespace MacroPad.App.ViewModels;
 
-public enum BindingKind { None, Keyboard, Media, Mouse, HomeAssistant }
+/// <summary>Action: the pad sends a trigger code and MacroPad does the rest (Home Assistant, profile switching).</summary>
+public enum BindingKind { None, Keyboard, Media, Mouse, Action }
 
 public sealed record Choice<T>(T Value, string Name)
 {
@@ -20,12 +21,15 @@ public sealed record Choice<T>(T Value, string Name)
 public partial class SlotViewModel : ViewModelBase
 {
     public static IReadOnlyList<BindingKind> Kinds { get; } =
-        [BindingKind.None, BindingKind.Keyboard, BindingKind.Media, BindingKind.Mouse, BindingKind.HomeAssistant];
+        [BindingKind.None, BindingKind.Keyboard, BindingKind.Media, BindingKind.Mouse, BindingKind.Action];
 
-    public static IReadOnlyList<HaCommand> HaCommands { get; } = Enum.GetValues<HaCommand>();
+    public static IReadOnlyList<PadCommand> PadCommands { get; } = Enum.GetValues<PadCommand>();
 
     /// <summary>Areas and lights from Home Assistant, filled in by the main view model when it connects.</summary>
     public static ObservableCollection<HaTarget> HaTargets { get; } = [HaTarget.Selected];
+
+    /// <summary>Profile names, kept up to date by the main view model.</summary>
+    public static ObservableCollection<string> ProfileNames { get; } = [];
 
     public static IReadOnlyList<Choice<ushort>> MediaChoices { get; } =
         Usages.Media.Select(m => new Choice<ushort>(m.Key, m.Value)).ToList();
@@ -54,23 +58,34 @@ public partial class SlotViewModel : ViewModelBase
     [ObservableProperty] public partial bool IsSelected { get; set; }
     [ObservableProperty] public partial string Summary { get; set; } = "—";
 
-    [ObservableProperty, NotifyPropertyChangedFor(nameof(IsKeyboard), nameof(IsMedia), nameof(IsMouse), nameof(IsHomeAssistant))]
+    [ObservableProperty, NotifyPropertyChangedFor(nameof(IsKeyboard), nameof(IsMedia), nameof(IsMouse), nameof(IsAction))]
     public partial BindingKind Kind { get; set; }
 
     public bool IsKeyboard => Kind == BindingKind.Keyboard;
     public bool IsMedia => Kind == BindingKind.Media;
     public bool IsMouse => Kind == BindingKind.Mouse;
-    public bool IsHomeAssistant => Kind == BindingKind.HomeAssistant;
+    public bool IsAction => Kind == BindingKind.Action;
 
-    // Home Assistant
-    [ObservableProperty, NotifyPropertyChangedFor(nameof(IsStepped))] public partial HaCommand HaCommand { get; set; }
+    // Action (handled by MacroPad)
+    [ObservableProperty, NotifyPropertyChangedFor(nameof(IsStepped), nameof(NeedsTarget), nameof(NeedsProfile))]
+    public partial PadCommand PadCommand { get; set; }
     [ObservableProperty] public partial HaTarget? HaTarget { get; set; }
     [ObservableProperty] public partial decimal HaStep { get; set; } = 5;
-    public bool IsStepped => HaCommand is HaCommand.Brighter or HaCommand.Dimmer;
+    [ObservableProperty] public partial string? ProfileChoice { get; set; }
+    public bool IsStepped => PadCommand is PadCommand.Brighter or PadCommand.Dimmer;
+    public bool NeedsTarget => PadCommand is not (PadCommand.NextProfile or PadCommand.Profile);
+    public bool NeedsProfile => PadCommand == PadCommand.Profile;
 
-    public HaAction? HaAction => Kind == BindingKind.HomeAssistant && HaTarget is not null
-        ? new HaAction(HaCommand, HaTarget, (int)HaStep)
-        : null;
+    /// <summary>Editing a profile other than Default, this slot shows Default's action because the profile has none.</summary>
+    [ObservableProperty] public partial bool IsInherited { get; set; }
+
+    /// <summary>The action as edited, or null when it isn't complete yet.</summary>
+    public PadAction? PadAction => Kind != BindingKind.Action ? null : PadCommand switch
+    {
+        PadCommand.NextProfile => new PadAction(PadCommand),
+        PadCommand.Profile => ProfileChoice is null ? null : new PadAction(PadCommand, ProfileName: ProfileChoice),
+        _ => HaTarget is null ? null : new PadAction(PadCommand, HaTarget, (int)HaStep),
+    };
 
     // Keyboard
     public ObservableCollection<KeyChord> Chords { get; } = [];
@@ -106,13 +121,13 @@ public partial class SlotViewModel : ViewModelBase
             Mods(MouseCtrl, MouseShift, MouseAlt, MouseWin),
             (MouseLeft ? MouseButtons.Left : 0) | (MouseRight ? MouseButtons.Right : 0) | (MouseMiddle ? MouseButtons.Middle : 0),
             (sbyte)MoveX, (sbyte)MoveY, (sbyte)Wheel),
-        BindingKind.HomeAssistant => new MediaBinding(TriggerCode),
+        BindingKind.Action => new MediaBinding(TriggerCode),
         BindingKind.None when _unknown is not null => _unknown,
         _ => new EmptyBinding(),
     };
 
     /// <summary>Shows a binding read from the device; clears the dirty flag.</summary>
-    public void Load(Binding binding, HaAction? action = null)
+    public void Load(Binding binding, PadAction? action = null, bool inherited = false)
     {
         _loading = true;
         _unknown = binding as UnknownBinding;
@@ -129,14 +144,16 @@ public partial class SlotViewModel : ViewModelBase
                 DelayMs = k.DelayMs;
                 break;
             case MediaBinding m when Triggers.IsTrigger(m.Usage):
-                Kind = BindingKind.HomeAssistant;
+                Kind = BindingKind.Action;
                 HaTarget = null;
+                ProfileChoice = null;
                 if (action is not null)
                 {
-                    if (!HaTargets.Contains(action.Target)) HaTargets.Add(action.Target);
-                    HaCommand = action.Command;
+                    if (action.Target is not null && !HaTargets.Contains(action.Target)) HaTargets.Add(action.Target);
+                    PadCommand = action.Command;
                     HaTarget = action.Target;
                     HaStep = action.Step;
+                    ProfileChoice = action.ProfileName;
                 }
                 break;
             case MediaBinding m:
@@ -160,6 +177,7 @@ public partial class SlotViewModel : ViewModelBase
                 Kind = BindingKind.None;
                 break;
         }
+        IsInherited = inherited;
         _loading = false;
         Summary = Describe();
         IsDirty = false;
@@ -167,8 +185,8 @@ public partial class SlotViewModel : ViewModelBase
 
     public void MarkSaved() => IsDirty = false;
 
-    string Describe() => Kind == BindingKind.HomeAssistant
-        ? HaAction?.Describe() ?? "Home Assistant (choose what it does)"
+    string Describe() => Kind == BindingKind.Action
+        ? (PadAction?.Describe() ?? "MacroPad action (choose what it does)") + (IsInherited ? " · from Default" : "")
         : Usages.Format(Binding);
 
     /// <summary>Adds a chord captured from a real key press.</summary>
@@ -198,7 +216,7 @@ public partial class SlotViewModel : ViewModelBase
     protected override void OnPropertyChanged(System.ComponentModel.PropertyChangedEventArgs e)
     {
         base.OnPropertyChanged(e);
-        if (e.PropertyName is nameof(IsDirty) or nameof(IsSelected) or nameof(Summary) or nameof(IsKeyboard) or nameof(IsMedia) or nameof(IsMouse) or nameof(IsHomeAssistant) or nameof(IsStepped)
+        if (e.PropertyName is nameof(IsDirty) or nameof(IsSelected) or nameof(Summary) or nameof(IsKeyboard) or nameof(IsMedia) or nameof(IsMouse) or nameof(IsAction) or nameof(IsStepped) or nameof(NeedsTarget) or nameof(NeedsProfile) or nameof(IsInherited)
             or nameof(PickedKey) or nameof(PickCtrl) or nameof(PickShift) or nameof(PickAlt) or nameof(PickWin))
             return;
         if (e.PropertyName == nameof(Kind) && !_loading) _unknown = null;
@@ -208,6 +226,8 @@ public partial class SlotViewModel : ViewModelBase
     void Changed()
     {
         if (_loading) return;
+        // Any edit makes this profile's own action.
+        IsInherited = false;
         Summary = Describe();
         IsDirty = true;
     }

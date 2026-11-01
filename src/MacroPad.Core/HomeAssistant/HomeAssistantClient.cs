@@ -5,9 +5,6 @@ using System.Text.Json.Serialization;
 
 namespace MacroPad.Core.HomeAssistant;
 
-/// <summary>Select only remembers a target for actions on <see cref="HaTarget.Selected"/> (the knob); it calls nothing.</summary>
-public enum HaCommand { Select, Toggle, TurnOn, TurnOff, Brighter, Dimmer }
-
 [JsonConverter(typeof(JsonStringEnumConverter<HaTargetKind>))]
 public enum HaTargetKind { Area, Light, Selected }
 
@@ -24,47 +21,11 @@ public sealed record HaTarget(HaTargetKind Kind, string Id, string Name)
     };
 }
 
-/// <summary>
-/// What a pad slot does in Home Assistant. <paramref name="Step"/> is for Brighter and Dimmer, in Home Assistant's
-/// brightness units: 1 is 1/255 of full brightness, the finest step a light can take.
-/// </summary>
-public sealed record HaAction(
-    [property: JsonConverter(typeof(JsonStringEnumConverter<HaCommand>))] HaCommand Command,
-    HaTarget Target,
-    int Step = 5)
+/// <summary>How lit a target is: lights on out of all, and their average brightness (0–255).</summary>
+public sealed record LightLevel(int On, int Total, int Brightness)
 {
-    public const int MaxStep = 255;
-
-    public string Describe()
-    {
-        var text = Words();
-        return char.ToUpperInvariant(text[0]) + text[1..];
-    }
-
-    string Words() => Command switch
-    {
-        HaCommand.Select => $"Knob controls {Target.Name}",
-        HaCommand.Toggle => $"Toggle {Target.Name}",
-        HaCommand.TurnOn => $"Turn on {Target.Name}",
-        HaCommand.TurnOff => $"Turn off {Target.Name}",
-        HaCommand.Brighter => $"{Target.Name} brighter ({Step}/255)",
-        HaCommand.Dimmer => $"{Target.Name} dimmer ({Step}/255)",
-        _ => Command.ToString(),
-    };
-}
-
-/// <summary>
-/// The pad can only send key codes, so a Home Assistant slot is written as a consumer usage from a range no OS acts on
-/// (0x0F00–0x0F7F). MacroPad, running in the background, sees the press and runs the matching action.
-/// </summary>
-public static class Triggers
-{
-    public const ushort First = 0x0F00;
-    public const ushort Last = 0x0F7F;
-
-    public static ushort Code(int layer, int slot) => (ushort)(First + (layer - 1) * 0x20 + slot);
-
-    public static bool IsTrigger(ushort usage) => usage is >= First and <= Last;
+    public bool IsOn => On > 0;
+    public int Percent => (int)Math.Round(Brightness * 100 / 255.0);
 }
 
 /// <summary>Talks to Home Assistant's REST API with a long-lived access token.</summary>
@@ -117,35 +78,35 @@ public sealed class HomeAssistantClient(HttpClient http, Uri baseUrl, string tok
     }
 
     /// <summary>Runs an action on an area or a light. Select and the Selected target are resolved by the caller.</summary>
-    public async Task RunAsync(HaAction action, CancellationToken cancel = default)
+    public async Task RunAsync(PadAction action, CancellationToken cancel = default)
     {
         var target = action.Target;
-        if (action.Command == HaCommand.Select || target.Kind == HaTargetKind.Selected)
+        if (target is null || !action.IsHomeAssistant || action.Command == PadCommand.Select || target.Kind == HaTargetKind.Selected)
             throw new ArgumentException("Select actions and the selected target are resolved before calling Home Assistant.", nameof(action));
         string service;
         var data = new JsonObject();
         switch (action.Command)
         {
-            case HaCommand.Toggle when target.Kind == HaTargetKind.Area:
+            case PadCommand.Toggle when target.Kind == HaTargetKind.Area:
                 // light.toggle on an area flips each light on its own, so a half-lit room would stay half-lit.
                 // Like a wall switch instead: anything on turns everything off, else everything on.
                 service = await AnyOnAsync(target.Id, cancel) ? "turn_off" : "turn_on";
                 break;
-            case HaCommand.Toggle:
+            case PadCommand.Toggle:
                 service = "toggle";
                 break;
-            case HaCommand.TurnOn:
+            case PadCommand.TurnOn:
                 service = "turn_on";
                 break;
-            case HaCommand.TurnOff:
+            case PadCommand.TurnOff:
                 service = "turn_off";
                 break;
-            case HaCommand.Brighter:
-            case HaCommand.Dimmer:
+            case PadCommand.Brighter:
+            case PadCommand.Dimmer:
                 service = "turn_on";
                 // Dimming to 0 turns the light off; brightening a light that is off starts it from 0.
-                var step = Math.Clamp(action.Step, 1, HaAction.MaxStep);
-                data["brightness_step"] = action.Command == HaCommand.Brighter ? step : -step;
+                var step = Math.Clamp(action.Step, 1, PadAction.MaxStep);
+                data["brightness_step"] = action.Command == PadCommand.Brighter ? step : -step;
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(action));
@@ -154,9 +115,36 @@ public sealed class HomeAssistantClient(HttpClient http, Uri baseUrl, string tok
         using var _ = await SendAsync(HttpMethod.Post, $"api/services/light/{service}", data, cancel);
     }
 
+    /// <summary>Reads how lit an area or a light is now. Home Assistant answers a service call after the state has changed.</summary>
+    public async Task<LightLevel> GetLevelAsync(HaTarget target, CancellationToken cancel = default)
+    {
+        var lights = target.Kind == HaTargetKind.Area
+            ? "area_entities(" + JsonValue.Create(target.Id).ToJsonString() + ")|select('match','light\\.')|list"
+            : "[" + JsonValue.Create(target.Id).ToJsonString() + "]";
+        var template = "{% set ls = " + lights + " %}{% set on = ls|select('is_state','on')|list %}" +
+            "{{ {'on': on|count, 'total': ls|count, 'brightness': on|map('state_attr','brightness')|reject('none')|list|average(0)}|tojson }}";
+        using var response = await SendAsync(HttpMethod.Post, "api/template", new JsonObject { ["template"] = template }, cancel);
+        var json = JsonNode.Parse(await response.Content.ReadAsStringAsync(cancel))!;
+        return new LightLevel((int)json["on"]!, (int)json["total"]!, (int)Math.Round((double)json["brightness"]!));
+    }
+
+    /// <summary>
+    /// Sets every light in the target to one brightness (0–255); 0 turns them off. <paramref name="transition"/> is the
+    /// fade in seconds; 0 makes the light jump straight there, which the knob wants so overlapping fades can't overshoot.
+    /// Lights that can't fade ignore it.
+    /// </summary>
+    public async Task SetBrightnessAsync(HaTarget target, int brightness, double? transition = null, CancellationToken cancel = default)
+    {
+        if (target.Kind == HaTargetKind.Selected) throw new ArgumentException("Resolve the selected target first.", nameof(target));
+        var data = new JsonObject { [target.Kind == HaTargetKind.Area ? "area_id" : "entity_id"] = target.Id };
+        if (transition is { } t) data["transition"] = t;
+        if (brightness > 0) data["brightness"] = Math.Clamp(brightness, 1, 255);
+        using var _ = await SendAsync(HttpMethod.Post, $"api/services/light/{(brightness > 0 ? "turn_on" : "turn_off")}", data, cancel);
+    }
+
     async Task<bool> AnyOnAsync(string areaId, CancellationToken cancel)
     {
-        var template = "{{ area_entities(" + JsonSerializer.Serialize(areaId) + ")|select('match','light\\\\.')|select('is_state','on')|list|count }}";
+        var template = "{{ area_entities(" + JsonValue.Create(areaId).ToJsonString() + ")|select('match','light\\\\.')|select('is_state','on')|list|count }}";
         using var response = await SendAsync(HttpMethod.Post, "api/template", new JsonObject { ["template"] = template }, cancel);
         return int.TryParse((await response.Content.ReadAsStringAsync(cancel)).Trim(), out var n) && n > 0;
     }

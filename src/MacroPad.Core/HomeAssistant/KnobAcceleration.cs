@@ -26,6 +26,6 @@ public sealed class KnobAcceleration
         }
         _last = now;
         _lastDirection = direction;
-        return Math.Clamp((int)Math.Round(baseStep * factor), 1, HaAction.MaxStep);
+        return Math.Clamp((int)Math.Round(baseStep * factor), 1, PadAction.MaxStep);
     }
 }

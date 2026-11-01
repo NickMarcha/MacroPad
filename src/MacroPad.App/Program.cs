@@ -11,6 +11,8 @@ sealed class Program
     [STAThread]
     public static void Main(string[] args)
     {
+        // Already running: hand over the command line (--profile next, or just "show the window") and stop.
+        if (SingleInstance.TrySendToRunning(args)) return;
         MacroPad.Core.Updates.Updater.CleanUp(Environment.ProcessPath);
         BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
     }

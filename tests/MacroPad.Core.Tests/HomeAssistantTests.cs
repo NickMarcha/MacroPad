@@ -27,14 +27,14 @@ public class HomeAssistantTests
     {
         var path = Path.Combine(Directory.CreateTempSubdirectory("macropad-settings").FullName, "settings.json");
         var s = new AppSettings { HomeAssistantUrl = "https://ha.example/", Token = "secret-token", KeepRunningInTray = false };
-        s.SetAction(Triggers.Code(1, 2), new HaAction(HaCommand.Dimmer, Panel, 15));
+        s.SetAction(Triggers.Code(1, 2), new PadAction(PadCommand.Dimmer, Panel, 15));
         s.Save(path);
         Assert.DoesNotContain(OperatingSystem.IsWindows() ? "secret-token" : "nothing-to-hide", File.ReadAllText(path));
 
         var loaded = AppSettings.Load(path);
         Assert.Equal("secret-token", loaded.Token);
         Assert.False(loaded.KeepRunningInTray);
-        Assert.Equal(new HaAction(HaCommand.Dimmer, Panel, 15), loaded.ActionFor(Triggers.Code(1, 2)));
+        Assert.Equal(new PadAction(PadCommand.Dimmer, Panel, 15), loaded.ActionFor(Triggers.Code(1, 2)));
         Assert.Null(loaded.ActionFor(Triggers.Code(1, 3)));
     }
 
@@ -48,7 +48,7 @@ public class HomeAssistantTests
     public async Task Area_toggle_turns_everything_off_when_anything_is_on()
     {
         var fake = new Recorder(templateAnswer: "1");
-        await Client(fake).RunAsync(new HaAction(HaCommand.Toggle, Office));
+        await Client(fake).RunAsync(new PadAction(PadCommand.Toggle, Office));
         Assert.Equal("POST /api/template", fake.Requests[0].Line);
         Assert.Equal("POST /api/services/light/turn_off", fake.Requests[1].Line);
         Assert.Contains("\"area_id\":\"office\"", fake.Requests[1].Body);
@@ -58,7 +58,7 @@ public class HomeAssistantTests
     public async Task Area_toggle_turns_on_when_all_are_off()
     {
         var fake = new Recorder(templateAnswer: "0");
-        await Client(fake).RunAsync(new HaAction(HaCommand.Toggle, Office));
+        await Client(fake).RunAsync(new PadAction(PadCommand.Toggle, Office));
         Assert.Equal("POST /api/services/light/turn_on", fake.Requests[1].Line);
     }
 
@@ -66,7 +66,7 @@ public class HomeAssistantTests
     public async Task Dimmer_steps_brightness_down()
     {
         var fake = new Recorder("");
-        await Client(fake).RunAsync(new HaAction(HaCommand.Dimmer, Panel, 10));
+        await Client(fake).RunAsync(new PadAction(PadCommand.Dimmer, Panel, 10));
         var (line, body, auth) = fake.Requests.Single();
         Assert.Equal("POST /api/services/light/turn_on", line);
         Assert.Contains("\"brightness_step\":-10", body);
@@ -78,7 +78,7 @@ public class HomeAssistantTests
     public async Task Finest_step_is_one_brightness_unit()
     {
         var fake = new Recorder("");
-        await Client(fake).RunAsync(new HaAction(HaCommand.Brighter, Panel, 1));
+        await Client(fake).RunAsync(new PadAction(PadCommand.Brighter, Panel, 1));
         Assert.Contains("\"brightness_step\":1,", fake.Requests.Single().Body);
     }
 
@@ -86,8 +86,8 @@ public class HomeAssistantTests
     public async Task Select_and_the_selected_target_never_reach_home_assistant()
     {
         var fake = new Recorder("");
-        await Assert.ThrowsAsync<ArgumentException>(() => Client(fake).RunAsync(new HaAction(HaCommand.Select, Office)));
-        await Assert.ThrowsAsync<ArgumentException>(() => Client(fake).RunAsync(new HaAction(HaCommand.Toggle, HaTarget.Selected)));
+        await Assert.ThrowsAsync<ArgumentException>(() => Client(fake).RunAsync(new PadAction(PadCommand.Select, Office)));
+        await Assert.ThrowsAsync<ArgumentException>(() => Client(fake).RunAsync(new PadAction(PadCommand.Toggle, HaTarget.Selected)));
         Assert.Empty(fake.Requests);
     }
 
@@ -109,6 +109,31 @@ public class HomeAssistantTests
         Assert.Equal(25, accel.Step(5, 1, T(1050)));    // 50 ms later: 5x
         Assert.Equal(40, accel.Step(5, 1, T(1060)));    // very fast: capped at 8x
         Assert.Equal(5, accel.Step(5, -1, T(1070)));    // changing direction starts slow again
+    }
+
+    [Fact]
+    public async Task Reads_how_lit_an_area_is()
+    {
+        var fake = new Recorder(templateAnswer: "{\"on\": 1, \"total\": 2, \"brightness\": 127.5}");
+        var level = await Client(fake).GetLevelAsync(Office);
+        Assert.Equal(new LightLevel(1, 2, 128), level);
+        Assert.Equal(50, level.Percent);
+        Assert.Contains("area_entities", fake.Requests.Single().Body);
+        Assert.Contains("office", fake.Requests.Single().Body);
+    }
+
+    [Fact]
+    public async Task Slider_at_zero_turns_off_and_otherwise_sets_brightness()
+    {
+        var fake = new Recorder("");
+        await Client(fake).SetBrightnessAsync(Panel, 0);
+        await Client(fake).SetBrightnessAsync(Panel, 128);
+        Assert.Equal("POST /api/services/light/turn_off", fake.Requests[0].Line);
+        Assert.Equal("POST /api/services/light/turn_on", fake.Requests[1].Line);
+        Assert.Contains("\"brightness\":128", fake.Requests[1].Body);
+        await Client(fake).SetBrightnessAsync(Panel, 128, transition: 0);
+        Assert.Contains("\"transition\":0", fake.Requests[2].Body);
+        Assert.DoesNotContain("transition", fake.Requests[1].Body);
     }
 
     static HomeAssistantClient Client(Recorder fake) => new(new HttpClient(fake), new Uri("https://ha.example/"), "t0ken");

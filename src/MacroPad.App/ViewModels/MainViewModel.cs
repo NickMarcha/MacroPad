@@ -173,7 +173,7 @@ public partial class MainViewModel : ViewModelBase, IDisposable
             return;
         foreach (var layer in Layers)
             foreach (var slot in layer.All)
-                slot.Load(read[layer.Number].GetValueOrDefault(slot.Slot, new EmptyBinding()), Settings.ActionFor(slot.TriggerCode));
+                LoadSlot(slot, read[layer.Number].GetValueOrDefault(slot.Slot, new EmptyBinding()));
         Message = "Read all layers from the pad.";
     }
 
@@ -198,7 +198,7 @@ public partial class MainViewModel : ViewModelBase, IDisposable
         foreach (var (_, slots) in changes)
             foreach (var s in slots)
             {
-                Settings.SetAction(s.TriggerCode, s.HaAction);
+                SaveAction(s);
                 s.MarkSaved();
             }
         SaveSettings();

@@ -45,13 +45,25 @@ public static class KeyMap
 
 public static class Converters
 {
+    /// <summary>For radio buttons over an enum: checked when the value equals the parameter; checking sets it.</summary>
+    public static readonly IValueConverter Is = new EnumIs();
+
+    sealed class EnumIs : IValueConverter
+    {
+        public object? Convert(object? value, System.Type targetType, object? parameter, System.Globalization.CultureInfo culture) =>
+            Equals(value, parameter);
+
+        public object? ConvertBack(object? value, System.Type targetType, object? parameter, System.Globalization.CultureInfo culture) =>
+            value is true ? parameter : Avalonia.Data.BindingOperations.DoNothing;
+    }
+
     public static readonly FuncValueConverter<KeyChord, string> Chord = new(c => c is null ? "" : Usages.Format(c));
 
-    /// <summary>Enum values as words: HomeAssistant → "Home Assistant", TurnOn → "Turn on".</summary>
+    /// <summary>Enum values as words: Action → "MacroPad action", TurnOn → "Turn on".</summary>
     public static readonly FuncValueConverter<object, string> Words = new(v =>
     {
         var name = v?.ToString() ?? "";
-        if (name == "HomeAssistant") return "Home Assistant";
+        if (name == "Action") return "MacroPad action";
         var sb = new System.Text.StringBuilder();
         foreach (var c in name)
         {

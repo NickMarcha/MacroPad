@@ -1,0 +1,22 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:MacroPad.App.ViewModels"
+        x:Class="MacroPad.App.Views.ToastWindow"
+        x:DataType="vm:ToastViewModel"
+        Title="MacroPad"
+        Width="340" SizeToContent="Height"
+        WindowDecorations="None" CanResize="False"
+        ShowInTaskbar="False" ShowActivated="False" Topmost="True"
+        Background="Transparent" TransparencyLevelHint="Transparent">
+
+    <Border Background="#F0202228" BorderBrush="#40FFFFFF" BorderThickness="1" CornerRadius="12" Padding="16,12" Margin="0">
+        <StackPanel Spacing="4">
+            <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Text="{Binding Title}" FontSize="16" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                <TextBlock Grid.Column="1" Text="{Binding Detail}" FontSize="14" Opacity="0.85" VerticalAlignment="Center" />
+            </Grid>
+            <TextBlock Text="{Binding Caption}" FontSize="12" Opacity="0.6" />
+            <Slider Minimum="0" Maximum="100" Value="{Binding Percent}" IsVisible="{Binding HasLevel}" Margin="0,-4,0,-8" />
+        </StackPanel>
+    </Border>
+</Window>

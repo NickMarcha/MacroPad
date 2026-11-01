@@ -15,10 +15,15 @@ this app running.
     the steps by pressing keys, or pick keys by name (F13–F24, or keys the OS grabs);
   - a media key (volume, play/pause, next track, …);
   - a mouse click, wheel or move, with modifiers held;
-  - a **Home Assistant** action: toggle, turn on or off, or step the brightness of an area or a single light, or
-    *select* a room for the knob to control.
+  - a **MacroPad action**: toggle, turn on or off, or step the brightness of a Home Assistant area or light;
+    *select* a room for the knob to control; or switch MacroPad's profile.
 - Sets the lights per layer (mode and color).
-- Runs in the tray (optionally from login) so pad presses reach Home Assistant without the window open.
+- **Profiles**: MacroPad's own layers of actions. Switch them from the tray menu, a pad key, a keyboard shortcut or
+  `macropad --profile <name|next>`.
+- A **pop-up** for each Home Assistant change and profile switch, with a brightness slider you can drag, in any of
+  nine places on the screen.
+- Runs in the tray (optionally from login) so pad presses reach Home Assistant without the window open. Closing
+  the window keeps it running there (an option).
 
 Tested with USB ID `514C:8851`. The app also looks for the other IDs the vendor app supports
 (`1189`/`514C` with PIDs `8830`–`8833`, `8840`, `8842`, `8850`), but those have not been tested.
@@ -88,12 +93,35 @@ and *Dimmer* step the brightness in Home Assistant's units (1 = 1/255 of full, t
 default). Knob turns accelerate like a mouse pointer: a single click moves the set step, and quick clicks in the
 same direction move up to 8 times as much. Dimming to zero turns the light off.
 
+While you turn, MacroPad keeps the brightness itself and sends exact values without a fade. (Relative steps went
+wrong when clicks came fast: Home Assistant works each out from the light's last report, which lags, so the light
+jumped.) It reads the light again after three seconds without a click. On an area, turning sets all its lights to
+the same brightness.
+
 A room picker setup, for example: keys 1–3 *Select* Office, Living Room and Bedroom; the knob's press is *Toggle*
 and its turns *Dimmer* and *Brighter*, all on the target *Selected room*. The keys then only choose which room the knob
 works on (MacroPad remembers the choice across restarts).
 
 Settings are in `%APPDATA%\MacroPad\settings.json` (Windows) or `~/.config/macropad/settings.json` (Linux). The
 token is encrypted for your Windows user; on Linux the file is readable only by you.
+
+## Profiles
+
+The pad's own layers can't be switched from the computer (the vendor app has no command for it either), so
+MacroPad has profiles instead. A profile says what each action key does; anything a profile doesn't set comes
+from **Default**, so a key set to *Next profile* in Default works in every profile. Keyboard, media and mouse
+bindings are stored on the pad and are the same in every profile.
+
+The profile picked in the window is the active one and the one you edit. To switch otherwise:
+
+- the tray icon's right-click menu (the active profile is ticked);
+- a pad key set to the MacroPad action *Next profile* or *Profile*;
+- a keyboard shortcut: on Windows, set one under *Next profile shortcut*; anywhere, have a shortcut run
+  `macropad --profile next` or `macropad --profile Kitchen` (on Linux, in your desktop's keyboard settings);
+- the command line: a second `macropad` hands its arguments to the running one, so only one ever runs.
+
+Switching shows a pop-up with the profile's name. Per-application profiles would build on this: a rule that picks
+the profile for the app in front.
 
 ## Layout
 
