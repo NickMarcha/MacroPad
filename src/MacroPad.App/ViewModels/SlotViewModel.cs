@@ -79,7 +79,7 @@ public partial class SlotViewModel : ViewModelBase
     public bool NeedsTarget => PadCommand is not (PadCommand.NextProfile or PadCommand.Profile);
     public bool NeedsProfile => PadCommand == PadCommand.Profile;
 
-    /// <summary>Editing a profile other than Default, this slot shows Default's action because the profile has none.</summary>
+    /// <summary>Editing a profile other than the default, this slot shows the default's action because the profile has none.</summary>
     [ObservableProperty] public partial bool IsInherited { get; set; }
 
     /// <summary>The action as edited, or null when it isn't complete yet.</summary>
@@ -200,7 +200,7 @@ public partial class SlotViewModel : ViewModelBase
     }
 
     string Describe() => Kind == BindingKind.Action
-        ? (PadAction?.Describe() ?? "MacroPad action (choose what it does)") + (IsInherited ? " · from Default" : "")
+        ? (PadAction?.Describe() ?? "MacroPad action (choose what it does)") + (IsInherited ? " · from the default profile" : "")
         : Usages.Format(Binding);
 
     /// <summary>Adds a chord captured from a real key press.</summary>

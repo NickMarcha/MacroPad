@@ -22,6 +22,34 @@ public partial class MainViewModel
     Profile EditedProfile => Settings.Find(EditedProfileName) ?? Settings.Default;
     public bool IsEditingDefault => EditedProfile == Settings.Default;
 
+    /// <summary>A line under the profile list: is this the default, and if not, which one it falls back to.</summary>
+    public string DefaultNote => IsEditingDefault
+        ? "This is the default profile: the others fall back to it for keys they don't set."
+        : $"Keys this profile doesn't set do what they do in {Settings.Default.Name}, the default profile.";
+
+    /// <summary>Makes the profile being edited the default; the old default becomes an ordinary profile.</summary>
+    [RelayCommand]
+    void MakeDefault()
+    {
+        if (IsEditingDefault) return;
+        if (Layers.SelectMany(l => l.All).Any(s => s.IsDirty))
+        {
+            Message = "Write or undo the changes on this profile first.";
+            return;
+        }
+        var profile = EditedProfile;
+        var old = Settings.Default.Name;
+        Settings.MakeDefault(profile);
+        SaveSettings();
+        SlotViewModel.ProfileNames.Move(SlotViewModel.ProfileNames.IndexOf(profile.Name), 0);
+        // Which keys are inherited, and from where, has changed.
+        foreach (var slot in Layers.SelectMany(l => l.All)) LoadSlot(slot, slot.Binding);
+        OnPropertyChanged(nameof(IsEditingDefault));
+        OnPropertyChanged(nameof(DefaultNote));
+        ProfilesChanged?.Invoke();
+        Message = $"{profile.Name} is the default profile now; {old} is an ordinary one you can delete.";
+    }
+
     void InitProfiles()
     {
         SlotViewModel.ProfileNames.Clear();
@@ -110,6 +138,7 @@ public partial class MainViewModel
         if (value is null) return;
         ProfileNameDraft = value;
         OnPropertyChanged(nameof(IsEditingDefault));
+        OnPropertyChanged(nameof(DefaultNote));
         // Show the edited profile's actions on the slots that are actions.
         foreach (var slot in Layers.SelectMany(l => l.All))
             if (!slot.IsDirty) LoadSlot(slot, slot.Binding);
@@ -141,7 +170,7 @@ public partial class MainViewModel
         Settings.SetAction(EditedProfile, slot.TriggerCode, null);
         SaveSettings();
         LoadSlot(slot, slot.Binding);
-        Message = $"{slot.Label} now does the same as in Default.";
+        Message = $"{slot.Label} now does the same as in {Settings.Default.Name}.";
     }
 
     /// <summary>The profile being edited, or all of them, as a profile file's text.</summary>

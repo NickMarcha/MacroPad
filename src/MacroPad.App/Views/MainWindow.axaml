@@ -149,12 +149,14 @@
                                       <Button Grid.Column="2" Content="New" ToolTip.Tip="New profile" Command="{Binding AddProfileCommand}" />
                                       <Button Grid.Column="4" Content="Delete" ToolTip.Tip="Delete this profile" Command="{Binding DeleteProfileCommand}" IsEnabled="{Binding !IsEditingDefault}" />
                                   </Grid>
-                                  <Grid ColumnDefinitions="*,6,Auto" IsEnabled="{Binding !IsEditingDefault}">
+                                  <Grid ColumnDefinitions="*,6,Auto">
                                       <TextBox Text="{Binding ProfileNameDraft}" PlaceholderText="Profile name" />
                                       <Button Grid.Column="2" Content="Rename" Command="{Binding RenameProfileCommand}" />
                                   </Grid>
                                   <StackPanel Orientation="Horizontal" Spacing="6">
-                                      <Button Content="Import…" Click="ImportProfiles_Click" ToolTip.Tip="Add profiles from a file" />
+                                      <Button Content="Make default" Command="{Binding MakeDefaultCommand}" IsEnabled="{Binding !IsEditingDefault}"
+                                            ToolTip.Tip="Other profiles fall back to the default for keys they don't set" />
+                                    <Button Content="Import…" Click="ImportProfiles_Click" ToolTip.Tip="Add profiles from a file" />
                                       <Button Content="Export ▾" ToolTip.Tip="Save profiles to a file">
                                           <Button.Flyout>
                                               <MenuFlyout>
@@ -164,8 +166,9 @@
                                           </Button.Flyout>
                                       </Button>
                                   </StackPanel>
+                                  <TextBlock Text="{Binding DefaultNote}" TextWrapping="Wrap" FontSize="12" Opacity="0.8" />
                                   <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.6"
-                                             Text="The profile picked here is the active one and the one you edit. Profiles change what action keys do; anything a profile doesn't set comes from Default. Keyboard, media and mouse keys are stored on the pad and are the same in every profile." />
+                                             Text="The profile picked here is the active one and the one you edit. Profiles change what action keys do; anything a profile doesn't set comes from the default profile. Keyboard, media and mouse keys are stored on the pad and are the same in every profile." />
                               </StackPanel>
 
                               <StackPanel Spacing="16" IsEnabled="{Binding IsConnected}">
@@ -334,9 +337,9 @@
                                       <StackPanel Spacing="12" IsVisible="{Binding IsAction}">
                                           <Border Background="#2028A0FF" CornerRadius="6" Padding="10,8" IsVisible="{Binding IsInherited}">
                                               <TextBlock TextWrapping="Wrap" FontSize="12"
-                                                         Text="This profile uses the Default profile's action here. Change it to give this profile its own." />
+                                                         Text="This profile uses the default profile's action here. Change it to give this profile its own." />
                                           </Border>
-                                          <Button Content="Use the Default profile's action"
+                                          <Button Content="Use the default profile's action"
                                                   IsVisible="{Binding !IsInherited}"
                                                   IsEnabled="{Binding !$parent[Window].((vm:MainViewModel)DataContext).IsEditingDefault}"
                                                   Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).UseDefaultActionCommand}" />

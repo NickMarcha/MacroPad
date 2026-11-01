@@ -102,6 +102,16 @@ public sealed class AppSettings
 
     public void SetAction(ushort code, PadAction? action) => SetAction(Default, code, action);
 
+    /// <summary>
+    /// Makes a profile the default: it moves to the front, and every other profile falls back to it for keys it doesn't
+    /// set. The old default becomes an ordinary profile (which can then be deleted).
+    /// </summary>
+    public void MakeDefault(Profile profile)
+    {
+        if (!Profiles.Remove(profile)) throw new ArgumentException("Not one of these settings' profiles.", nameof(profile));
+        Profiles.Insert(0, profile);
+    }
+
     /// <summary>Makes the profile after the active one active (wrapping round) and returns it.</summary>
     public Profile NextProfile()
     {

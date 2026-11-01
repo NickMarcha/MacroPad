@@ -76,7 +76,9 @@ which of nine places on the screen).
 
 The pad's own layers can't be switched from the computer (the vendor app has no command for it either), so
 MacroPad has profiles. A profile says what each action key does; anything a profile doesn't set comes from
-**Default**, so a key set to *Next profile* in Default works in every profile. Each profile remembers its own
+the **default profile** (at first the one called Default), so a key set to *Next profile* there works in every
+profile. *Make default* turns the profile you're editing into the default; the old one becomes ordinary and can be
+deleted or renamed. Each profile remembers its own
 selected target. Keyboard, media and mouse bindings are stored on the pad and are the same in every profile.
 
 The profile picked in the window is the active one and the one you edit. To switch otherwise:

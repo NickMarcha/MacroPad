@@ -41,6 +41,22 @@ public class ProfileTests
     }
 
     [Fact]
+    public void Another_profile_can_become_the_default()
+    {
+        var s = TwoProfiles();
+        var cooking = s.Find("Cooking")!;
+        s.MakeDefault(cooking);
+        Assert.Same(cooking, s.Default);
+        Assert.Equal(["Cooking", "Default"], s.Profiles.Select(p => p.Name));
+        // The old default now falls back to Cooking: it sets Key1 itself, and the knob comes from Cooking (unset there).
+        s.ActiveProfile = "Default";
+        Assert.Equal(Office, s.ActionFor(Key1)!.Target);
+        Assert.Null(s.ActionFor(Triggers.Code(1, 2)));
+        s.Profiles.Remove(s.Find("Default")!);
+        Assert.Equal("Cooking", s.Active.Name);
+    }
+
+    [Fact]
     public void Unknown_active_profile_means_default()
     {
         var s = TwoProfiles();
