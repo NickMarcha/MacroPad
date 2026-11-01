@@ -153,9 +153,9 @@ public partial class MainViewModel : ViewModelBase, IDisposable
         var number = SelectedLayer?.Number ?? 1;
         Layers = Enumerable.Range(1, Protocol.LayerCount).Select(layer => new LayerViewModel(
             layer,
-            Enumerable.Range(0, buttons).Select(b => new SlotViewModel(Protocol.ButtonSlot(b), $"Key {b + 1}")).ToList(),
+            Enumerable.Range(0, buttons).Select(b => new SlotViewModel(layer, Protocol.ButtonSlot(b), $"Key {b + 1}")).ToList(),
             Enumerable.Range(0, knobs).SelectMany(k => Enumerable.Range(0, 3).Select(a =>
-                new SlotViewModel(Protocol.KnobSlot(k, a), knobs == 1 ? actions[a] : $"Knob {k + 1} {actions[a]}"))).ToList()
+                new SlotViewModel(layer, Protocol.KnobSlot(k, a), knobs == 1 ? actions[a] : $"Knob {k + 1} {actions[a]}"))).ToList()
         )).ToList();
         SelectedLayer = Layers[number - 1];
     }
@@ -173,7 +173,7 @@ public partial class MainViewModel : ViewModelBase, IDisposable
             return;
         foreach (var layer in Layers)
             foreach (var slot in layer.All)
-                slot.Load(read[layer.Number].GetValueOrDefault(slot.Slot, new EmptyBinding()));
+                slot.Load(read[layer.Number].GetValueOrDefault(slot.Slot, new EmptyBinding()), Settings.ActionFor(slot.TriggerCode));
         Message = "Read all layers from the pad.";
     }
 
@@ -194,8 +194,14 @@ public partial class MainViewModel : ViewModelBase, IDisposable
                     device.WriteBindings(layer, slots.Select(s => KeyValuePair.Create(s.Slot, s.Binding)).ToList());
             }))
             return;
+        // The pad only knows a Home Assistant slot by its trigger code; what the code does is kept in the settings.
         foreach (var (_, slots) in changes)
-            foreach (var s in slots) s.MarkSaved();
+            foreach (var s in slots)
+            {
+                Settings.SetAction(s.TriggerCode, s.HaAction);
+                s.MarkSaved();
+            }
+        SaveSettings();
         Message = $"Saved {changes.Sum(c => c.Slots.Count)} change(s) to the pad.";
     }
 
@@ -235,5 +241,9 @@ public partial class MainViewModel : ViewModelBase, IDisposable
         }
     }
 
-    public void Dispose() => _device?.Dispose();
+    public void Dispose()
+    {
+        _listener.Dispose();
+        _device?.Dispose();
+    }
 }

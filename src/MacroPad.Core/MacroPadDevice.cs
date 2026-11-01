@@ -5,10 +5,6 @@ namespace MacroPad.Core;
 /// <summary>An open connection to the macropad's configuration interface.</summary>
 public sealed class MacroPadDevice : IDisposable
 {
-    // IDs the vendor's MINI_KEYBOARD.exe looks for. Only 514C:8851 has been tested.
-    static readonly int[] VendorIds = [0x514C, 0x1189];
-    static readonly int[] ProductIds = [0x8842, 0x8840, 0x8830, 0x8831, 0x8832, 0x8833, 0x8850, 0x8851];
-
     readonly HidStream _stream;
 
     public HidDevice Device { get; }
@@ -31,10 +27,7 @@ public sealed class MacroPadDevice : IDisposable
     /// <summary>Finds the first connected macropad, or returns null.</summary>
     public static MacroPadDevice? OpenFirst()
     {
-        // Each pad exposes several HID interfaces; the configuration one takes 65-byte output reports.
-        var candidate = DeviceList.Local.GetHidDevices()
-            .Where(d => VendorIds.Contains(d.VendorID) && ProductIds.Contains(d.ProductID))
-            .FirstOrDefault(d => SafeOutputLength(d) == Protocol.ReportLength);
+        var candidate = PadIds.Find().FirstOrDefault(PadIds.IsConfigInterface);
         if (candidate is null || !candidate.TryOpen(out HidStream stream))
             return null;
         try
@@ -89,12 +82,6 @@ public sealed class MacroPadDevice : IDisposable
         var buffer = new byte[Protocol.ReportLength];
         int n = _stream.Read(buffer, 0, buffer.Length);
         return buffer[..n];
-    }
-
-    static int SafeOutputLength(HidDevice d)
-    {
-        try { return d.GetMaxOutputReportLength(); }
-        catch { return 0; }
     }
 
     public void Dispose() => _stream.Dispose();

@@ -35,10 +35,10 @@ jobs:
           - os: ubuntu-latest
             rid: linux-x64
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ env.TAG }}
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
       - name: Test
@@ -49,7 +49,7 @@ jobs:
           version="${TAG#v}"
           dotnet publish src/MacroPad.App -c Release -r ${{ matrix.rid }} -p:Version="$version" -o out
           ls -la out
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.rid }}
           path: out/MacroPad*
@@ -58,10 +58,10 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ env.TAG }}
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           path: artifacts
       - name: Assemble
@@ -99,7 +99,7 @@ jobs:
           AUR_SSH_PRIVATE_KEY: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
         run: |
           if [ -n "$AUR_SSH_PRIVATE_KEY" ]; then echo "ready=true" >> "$GITHUB_OUTPUT"; else echo "::warning::AUR_SSH_PRIVATE_KEY is not set, so the AUR package was not updated"; fi
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         if: steps.aur.outputs.ready == 'true'
         with:
           ref: ${{ env.TAG }}

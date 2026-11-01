@@ -1,13 +1,15 @@
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MacroPad.Core;
+using MacroPad.Core.HomeAssistant;
 
 namespace MacroPad.App.ViewModels;
 
-public enum BindingKind { None, Keyboard, Media, Mouse }
+public enum BindingKind { None, Keyboard, Media, Mouse, HomeAssistant }
 
 public sealed record Choice<T>(T Value, string Name)
 {
@@ -17,7 +19,13 @@ public sealed record Choice<T>(T Value, string Name)
 /// <summary>One key or knob action on the current layer, and the editor state for it.</summary>
 public partial class SlotViewModel : ViewModelBase
 {
-    public static IReadOnlyList<BindingKind> Kinds { get; } = [BindingKind.None, BindingKind.Keyboard, BindingKind.Media, BindingKind.Mouse];
+    public static IReadOnlyList<BindingKind> Kinds { get; } =
+        [BindingKind.None, BindingKind.Keyboard, BindingKind.Media, BindingKind.Mouse, BindingKind.HomeAssistant];
+
+    public static IReadOnlyList<HaCommand> HaCommands { get; } = Enum.GetValues<HaCommand>();
+
+    /// <summary>Areas and lights from Home Assistant, filled in by the main view model when it connects.</summary>
+    public static ObservableCollection<HaTarget> HaTargets { get; } = [];
 
     public static IReadOnlyList<Choice<ushort>> MediaChoices { get; } =
         Usages.Media.Select(m => new Choice<ushort>(m.Key, m.Value)).ToList();
@@ -27,26 +35,42 @@ public partial class SlotViewModel : ViewModelBase
 
     bool _loading;
 
-    public SlotViewModel(int slot, string label)
+    public SlotViewModel(int layer, int slot, string label)
     {
+        Layer = layer;
         Slot = slot;
         Label = label;
         Chords.CollectionChanged += (_, _) => Changed();
     }
 
+    public int Layer { get; }
     public int Slot { get; }
+
+    /// <summary>The key code the pad sends for this slot when it is a Home Assistant action.</summary>
+    public ushort TriggerCode => Triggers.Code(Layer, Slot);
     public string Label { get; }
 
     [ObservableProperty] public partial bool IsDirty { get; set; }
     [ObservableProperty] public partial bool IsSelected { get; set; }
     [ObservableProperty] public partial string Summary { get; set; } = "—";
 
-    [ObservableProperty, NotifyPropertyChangedFor(nameof(IsKeyboard), nameof(IsMedia), nameof(IsMouse))]
+    [ObservableProperty, NotifyPropertyChangedFor(nameof(IsKeyboard), nameof(IsMedia), nameof(IsMouse), nameof(IsHomeAssistant))]
     public partial BindingKind Kind { get; set; }
 
     public bool IsKeyboard => Kind == BindingKind.Keyboard;
     public bool IsMedia => Kind == BindingKind.Media;
     public bool IsMouse => Kind == BindingKind.Mouse;
+    public bool IsHomeAssistant => Kind == BindingKind.HomeAssistant;
+
+    // Home Assistant
+    [ObservableProperty, NotifyPropertyChangedFor(nameof(IsStepped))] public partial HaCommand HaCommand { get; set; }
+    [ObservableProperty] public partial HaTarget? HaTarget { get; set; }
+    [ObservableProperty] public partial decimal HaStep { get; set; } = 10;
+    public bool IsStepped => HaCommand is HaCommand.Brighter or HaCommand.Dimmer;
+
+    public HaAction? HaAction => Kind == BindingKind.HomeAssistant && HaTarget is not null
+        ? new HaAction(HaCommand, HaTarget, (int)HaStep)
+        : null;
 
     // Keyboard
     public ObservableCollection<KeyChord> Chords { get; } = [];
@@ -82,12 +106,13 @@ public partial class SlotViewModel : ViewModelBase
             Mods(MouseCtrl, MouseShift, MouseAlt, MouseWin),
             (MouseLeft ? MouseButtons.Left : 0) | (MouseRight ? MouseButtons.Right : 0) | (MouseMiddle ? MouseButtons.Middle : 0),
             (sbyte)MoveX, (sbyte)MoveY, (sbyte)Wheel),
+        BindingKind.HomeAssistant => new MediaBinding(TriggerCode),
         BindingKind.None when _unknown is not null => _unknown,
         _ => new EmptyBinding(),
     };
 
     /// <summary>Shows a binding read from the device; clears the dirty flag.</summary>
-    public void Load(Binding binding)
+    public void Load(Binding binding, HaAction? action = null)
     {
         _loading = true;
         _unknown = binding as UnknownBinding;
@@ -102,6 +127,17 @@ public partial class SlotViewModel : ViewModelBase
                 Kind = BindingKind.Keyboard;
                 foreach (var c in k.Chords) Chords.Add(c);
                 DelayMs = k.DelayMs;
+                break;
+            case MediaBinding m when Triggers.IsTrigger(m.Usage):
+                Kind = BindingKind.HomeAssistant;
+                HaTarget = null;
+                if (action is not null)
+                {
+                    if (!HaTargets.Contains(action.Target)) HaTargets.Add(action.Target);
+                    HaCommand = action.Command;
+                    HaTarget = action.Target;
+                    HaStep = action.StepPercent;
+                }
                 break;
             case MediaBinding m:
                 Kind = BindingKind.Media;
@@ -125,11 +161,15 @@ public partial class SlotViewModel : ViewModelBase
                 break;
         }
         _loading = false;
-        Summary = Usages.Format(Binding);
+        Summary = Describe();
         IsDirty = false;
     }
 
     public void MarkSaved() => IsDirty = false;
+
+    string Describe() => Kind == BindingKind.HomeAssistant
+        ? HaAction?.Describe() ?? "Home Assistant (choose what it does)"
+        : Usages.Format(Binding);
 
     /// <summary>Adds a chord captured from a real key press.</summary>
     public void AddChord(KeyChord chord)
@@ -158,7 +198,7 @@ public partial class SlotViewModel : ViewModelBase
     protected override void OnPropertyChanged(System.ComponentModel.PropertyChangedEventArgs e)
     {
         base.OnPropertyChanged(e);
-        if (e.PropertyName is nameof(IsDirty) or nameof(IsSelected) or nameof(Summary) or nameof(IsKeyboard) or nameof(IsMedia) or nameof(IsMouse)
+        if (e.PropertyName is nameof(IsDirty) or nameof(IsSelected) or nameof(Summary) or nameof(IsKeyboard) or nameof(IsMedia) or nameof(IsMouse) or nameof(IsHomeAssistant) or nameof(IsStepped)
             or nameof(PickedKey) or nameof(PickCtrl) or nameof(PickShift) or nameof(PickAlt) or nameof(PickWin))
             return;
         if (e.PropertyName == nameof(Kind) && !_loading) _unknown = null;
@@ -168,7 +208,7 @@ public partial class SlotViewModel : ViewModelBase
     void Changed()
     {
         if (_loading) return;
-        Summary = Usages.Format(Binding);
+        Summary = Describe();
         IsDirty = true;
     }
 }

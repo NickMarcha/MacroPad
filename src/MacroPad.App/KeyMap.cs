@@ -46,4 +46,18 @@ public static class KeyMap
 public static class Converters
 {
     public static readonly FuncValueConverter<KeyChord, string> Chord = new(c => c is null ? "" : Usages.Format(c));
+
+    /// <summary>Enum values as words: HomeAssistant → "Home Assistant", TurnOn → "Turn on".</summary>
+    public static readonly FuncValueConverter<object, string> Words = new(v =>
+    {
+        var name = v?.ToString() ?? "";
+        if (name == "HomeAssistant") return "Home Assistant";
+        var sb = new System.Text.StringBuilder();
+        foreach (var c in name)
+        {
+            if (char.IsUpper(c) && sb.Length > 0) sb.Append(' ').Append(char.ToLowerInvariant(c));
+            else sb.Append(c);
+        }
+        return sb.ToString();
+    });
 }

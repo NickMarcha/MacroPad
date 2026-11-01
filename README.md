@@ -14,8 +14,10 @@ this app running.
   - a keyboard shortcut or a macro of up to 18 steps, with an optional delay between steps. Record
     the steps by pressing keys, or pick keys by name (F13–F24, or keys the OS grabs);
   - a media key (volume, play/pause, next track, …);
-  - a mouse click, wheel or move, with modifiers held.
+  - a mouse click, wheel or move, with modifiers held;
+  - a **Home Assistant** action: toggle, turn on or off, or step the brightness of an area or a single light.
 - Sets the lights per layer (mode and color).
+- Runs in the tray (optionally from login) so pad presses reach Home Assistant without the window open.
 
 Tested with USB ID `514C:8851`. The app also looks for the other IDs the vendor app supports
 (`1189`/`514C` with PIDs `8830`–`8833`, `8840`, `8842`, `8850`), but those have not been tested.
@@ -67,10 +69,30 @@ Push a tag: `git tag v0.2.0 && git push origin v0.2.0`. `.github/workflows/relea
 and Linux, publishes the GitHub release and updates the AUR package (`packaging/aur/README.md` covers the one-time
 AUR setup).
 
+## Home Assistant
+
+1. In Home Assistant, open your profile → Security → *Long-lived access tokens* and create one.
+2. In MacroPad, under **Home Assistant**, paste the address (a dashboard link works too) and the token, and press
+   Connect. Your areas and lights appear in the editor.
+3. Set a key or knob action to *Home Assistant*, pick what it does and on what, and press *Write to pad*.
+
+How it works: the pad can only send key codes, so a Home Assistant slot is written as a consumer-control code from
+an unused range (`0x0F00`–`0x0F7F`) that Windows and Linux ignore. MacroPad reads the pad's reports in the
+background (without taking them from the OS, and on Wayland too) and calls Home Assistant's REST API. The action
+for each code lives in MacroPad's settings, so Home Assistant actions only work while MacroPad runs: leave it in the
+tray, and tick *Start at login*.
+
+*Toggle* on an area works like a wall switch: if any light in it is on, all go off; otherwise all go on. *Brighter*
+and *Dimmer* step the brightness by a percentage and suit the knob's turns.
+
+Settings are in `%APPDATA%\MacroPad\settings.json` (Windows) or `~/.config/macropad/settings.json` (Linux). The
+token is encrypted for your Windows user; on Linux the file is readable only by you.
+
 ## Layout
 
 - `src/MacroPad.Core`: protocol encoding (`Protocol.cs`), binding types, HID access through
-  HidSharp (`MacroPadDevice.cs`), key and media names, and install detection and self-update (`Updates/`).
+  HidSharp (`MacroPadDevice.cs`), the background listener (`PadListener.cs`), settings (`AppSettings.cs`), the
+  Home Assistant client (`HomeAssistant/`), key and media names, and install detection and self-update (`Updates/`).
 - `src/MacroPad.App`: the Avalonia UI.
 - `tests/MacroPad.Core.Tests`: protocol tests built from real reports the pad sent, and update tests.
 - `packaging/`: the Linux desktop entry, icon and udev rule, and the AUR package.
@@ -79,6 +101,7 @@ AUR setup).
 
 - The pad cannot report its current light setting, so the lights panel shows what you are about to
   set, not what is on the pad now.
+- Tested on Windows. The Linux build compiles and packages but has not been run against the pad on Linux yet.
 - The Windows build is not code-signed, so SmartScreen warns the first time it runs.
 - Modifiers you record are always the left-hand ones.
 - Keys the OS takes before the app sees them (Win, Alt+Tab, Print Screen on some desktops) need the
