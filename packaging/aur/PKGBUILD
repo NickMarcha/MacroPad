@@ -6,7 +6,7 @@
 pkgname=macropad-bin
 pkgver=0.1.0
 pkgrel=1
-pkgdesc="Configure MINI_KEYBOARD macropads (keys, knob, lights) and trigger Home Assistant from them"
+pkgdesc="Program MINI_KEYBOARD macropads and use their keys for Home Assistant, Bragi audio and profiles"
 arch=('x86_64')
 url="https://github.com/NickMarcha/MacroPad"
 license=('PolyForm-Noncommercial-1.0.0')

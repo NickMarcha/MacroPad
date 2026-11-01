@@ -12,28 +12,31 @@ The release workflow (`.github/workflows/release.yml`) sets `pkgver`, fills in t
 pushes to the AUR on every `v*` tag. That needs the repository secret `AUR_SSH_PRIVATE_KEY`; without it the release
 still happens and the AUR step only warns.
 
-## Publishing it the first time
+## The key
 
-On the CachyOS machine:
+The workflow pushes with an SSH key used only for this package. Its public half is on the AUR account (My Account →
+SSH Public Key, one key per line, next to any others), its private half only in the repository secret
+`AUR_SSH_PRIVATE_KEY`; no copy is kept anywhere else.
 
-1. Register at https://aur.archlinux.org and, under My Account, paste an SSH public key. A key just for the AUR:
+To replace it (lost, leaked, or just rotated):
 
-   ```
-   ssh-keygen -t ed25519 -f ~/.ssh/aur -C aur
-   cat ~/.ssh/aur.pub
-   ```
+```sh
+ssh-keygen -t ed25519 -C "macropad-aur (GitHub Actions, NickMarcha/MacroPad)" -N "" -f macropad_aur
+gh secret set AUR_SSH_PRIVATE_KEY -R NickMarcha/MacroPad < macropad_aur
+cat macropad_aur.pub      # add to the AUR account, remove the old line there
+ssh -i macropad_aur aur@aur.archlinux.org help   # "Commands: ..." means the AUR accepts it
+rm macropad_aur macropad_aur.pub
+```
 
-   and in `~/.ssh/config`:
+Then run the release workflow for the latest tag (Actions → Release → Run workflow), or push the next tag.
 
-   ```
-   Host aur.archlinux.org
-     IdentityFile ~/.ssh/aur
-     User aur
-   ```
+## Testing the package
 
-2. Give the workflow the private key: `gh secret set AUR_SSH_PRIVATE_KEY -R NickMarcha/MacroPad < ~/.ssh/aur`.
-3. Run the release workflow again for the current tag (Actions → Release → Run workflow, or
-   `gh workflow run release.yml -R NickMarcha/MacroPad -f tag=v0.1.0`). Pushing to a package name that does not
-   exist yet creates it.
+In this folder on an Arch machine (or `docker run -it archlinux`): set `pkgver` to a released version, then
 
-To test the package locally before that: `makepkg -si` in this folder (after `updpkgsums`).
+```sh
+updpkgsums && makepkg --printsrcinfo > .SRCINFO && makepkg -si && namcap PKGBUILD *.pkg.tar.zst
+```
+
+`namcap` says the dependencies "may not be needed": the single-file binary loads them at run time, which it can't
+see. They are needed (Avalonia's X11 and text rendering).
