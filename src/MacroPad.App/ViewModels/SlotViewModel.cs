@@ -39,19 +39,22 @@ public partial class SlotViewModel : ViewModelBase
 
     bool _loading;
 
-    public SlotViewModel(int layer, int slot, string label)
+    public SlotViewModel(int pad, int layer, int slot, string label)
     {
+        Pad = pad;
         Layer = layer;
         Slot = slot;
         Label = label;
         Chords.CollectionChanged += (_, _) => Changed();
     }
 
+    /// <summary>The pad's number, which picks its block of trigger codes.</summary>
+    public int Pad { get; }
     public int Layer { get; }
     public int Slot { get; }
 
     /// <summary>The key code the pad sends for this slot when it is a Home Assistant action.</summary>
-    public ushort TriggerCode => Triggers.Code(Layer, Slot);
+    public ushort TriggerCode => Triggers.Code(Layer, Slot, Pad);
     public string Label { get; }
 
     [ObservableProperty] public partial bool IsDirty { get; set; }
@@ -184,6 +187,17 @@ public partial class SlotViewModel : ViewModelBase
     }
 
     public void MarkSaved() => IsDirty = false;
+
+    /// <summary>Makes this slot a MacroPad action doing <paramref name="action"/> (an edit: the slot needs writing).</summary>
+    public void UseAction(PadAction action)
+    {
+        if (action.Target is not null && !Targets.Contains(action.Target)) Targets.Add(action.Target);
+        PadCommand = action.Command;
+        Target = action.Target;
+        HaStep = action.Step;
+        ProfileChoice = action.ProfileName;
+        Kind = BindingKind.Action;
+    }
 
     string Describe() => Kind == BindingKind.Action
         ? (PadAction?.Describe() ?? "MacroPad action (choose what it does)") + (IsInherited ? " · from Default" : "")

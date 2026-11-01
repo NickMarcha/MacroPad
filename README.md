@@ -87,7 +87,24 @@ The profile picked in the window is the active one and the one you edit. To swit
   `macropad --profile next` or `macropad --profile <name>` (on Linux, in your desktop's keyboard settings);
 - the command line: a second `macropad` hands its arguments to the running one, so only one ever runs.
 
+**Export and import.** Under the profile list, *Export* saves the profile you're editing (or all of them) to a
+`.macropad.json` file, and *Import* adds the profiles from one; a name that's taken gets "(2)". The file holds only
+the profiles (what each action key does, and the knob's selection), never connection settings, tokens or keys, so it's
+safe to share. Targets name Home Assistant areas and lights and Bragi controls by id, so they work where the same ones
+exist. After an import, keys the profile uses that aren't MacroPad actions on this pad yet are switched to actions and
+marked as changes: *Write to pad* finishes the job.
+
 Per-application profiles would build on this: a rule that picks the profile for the app in front.
+
+### Several pads
+
+MacroPad works with several pads at once, also several of the same model. Each pad gets a number, and its action keys
+send codes from that number's own block, so a press says which pad it came from whichever USB port it's in. With
+more than one plugged in, a list in the header picks the pad to edit. Profiles cover all pads: a profile can give each
+pad's keys their own actions.
+
+A pad is recognised by its USB serial number. Pads that share a serial (cheap ones from one batch can) are told apart
+by their USB port instead; keep each in its port. Only one pad has been tested so far.
 
 ## Connections
 
@@ -184,6 +201,7 @@ covers the one-time AUR setup).
   profiles, the dial and updates.
 - `packaging/`: the Linux desktop entry, icon and udev rule, and the AUR package.
 - `.github/ISSUE_TEMPLATE/`: the problem, hardware and connection forms.
+- Also in Core: profile files (`ProfileFile.cs`) and telling pads apart (`Pads.cs`).
 
 ## Known limitations
 

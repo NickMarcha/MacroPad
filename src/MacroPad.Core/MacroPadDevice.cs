@@ -24,15 +24,14 @@ public sealed class MacroPadDevice : IDisposable
 
     public string Name => $"{Device.VendorID:X4}:{Device.ProductID:X4}";
 
-    /// <summary>Finds the first connected macropad, or returns null.</summary>
-    public static MacroPadDevice? OpenFirst()
+    /// <summary>Opens a pad's configuration interface (from <see cref="Pads.Connected"/>), or returns null.</summary>
+    public static MacroPadDevice? Open(HidDevice device)
     {
-        var candidate = PadIds.Find().FirstOrDefault(PadIds.IsConfigInterface);
-        if (candidate is null || !candidate.TryOpen(out HidStream stream))
+        if (!device.TryOpen(out HidStream stream))
             return null;
         try
         {
-            return new MacroPadDevice(candidate, stream);
+            return new MacroPadDevice(device, stream);
         }
         catch
         {

@@ -29,6 +29,9 @@ public sealed class AppSettings
     /// <summary>MacroPad's profiles. The first is the Default every other profile falls back to.</summary>
     public List<Profile> Profiles { get; set; } = [new Profile()];
 
+    /// <summary>The pads MacroPad has seen, each with the number that picks its block of trigger codes.</summary>
+    public List<PadRecord> Pads { get; set; } = [];
+
     /// <summary>The name of the active profile.</summary>
     public string? ActiveProfile { get; set; }
 
@@ -71,6 +74,17 @@ public sealed class AppSettings
     }
 
     public Profile? Find(string? name) => Profiles.FirstOrDefault(p => p.Name == name);
+
+    /// <summary>The record for a pad, made on first sight with the lowest free number (the first pad gets 0).</summary>
+    public PadRecord PadFor(string key)
+    {
+        if (Pads.FirstOrDefault(p => p.Key == key) is { } known) return known;
+        var number = Enumerable.Range(0, Triggers.MaxPads).FirstOrDefault(n => Pads.All(p => p.Number != n), -1);
+        if (number < 0) throw new InvalidOperationException($"MacroPad already knows {Triggers.MaxPads} pads; forget one first.");
+        var pad = new PadRecord { Key = key, Number = number };
+        Pads.Add(pad);
+        return pad;
+    }
 
     /// <summary>What a press does now: the active profile's action, else the Default profile's.</summary>
     public PadAction? ActionFor(ushort code) => ActionFor(Active, code);

@@ -93,7 +93,11 @@
                         <TextBlock Text="MacroPad" FontSize="20" FontWeight="SemiBold" />
                         <TextBlock Text="{Binding VersionText}" Opacity="0.6" VerticalAlignment="Bottom" Margin="0,0,0,3" />
                     </StackPanel>
-                    <TextBlock Text="{Binding DeviceStatus}" Opacity="0.8" />
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <ComboBox ItemsSource="{Binding PadChoices}" SelectedItem="{Binding SelectedPad}" IsVisible="{Binding HasSeveralPads}"
+                                  MinWidth="200" Padding="8,2" ToolTip.Tip="The pad to edit" />
+                        <TextBlock Text="{Binding DeviceStatus}" Opacity="0.8" VerticalAlignment="Center" />
+                    </StackPanel>
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                     <Button Content="Connect" Command="{Binding ConnectCommand}" />
@@ -149,6 +153,17 @@
                                       <TextBox Text="{Binding ProfileNameDraft}" PlaceholderText="Profile name" />
                                       <Button Grid.Column="2" Content="Rename" Command="{Binding RenameProfileCommand}" />
                                   </Grid>
+                                  <StackPanel Orientation="Horizontal" Spacing="6">
+                                      <Button Content="Import…" Click="ImportProfiles_Click" ToolTip.Tip="Add profiles from a file" />
+                                      <Button Content="Export ▾" ToolTip.Tip="Save profiles to a file">
+                                          <Button.Flyout>
+                                              <MenuFlyout>
+                                                  <MenuItem Header="This profile…" Click="ExportProfile_Click" />
+                                                  <MenuItem Header="All profiles…" Click="ExportAllProfiles_Click" />
+                                              </MenuFlyout>
+                                          </Button.Flyout>
+                                      </Button>
+                                  </StackPanel>
                                   <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.6"
                                              Text="The profile picked here is the active one and the one you edit. Profiles change what action keys do; anything a profile doesn't set comes from Default. Keyboard, media and mouse keys are stored on the pad and are the same in every profile." />
                               </StackPanel>

@@ -70,16 +70,31 @@ public sealed class Profile
 
 /// <summary>
 /// The pad can only send key codes, so a slot MacroPad handles is written as a consumer usage from a range no OS acts
-/// on (0x0F00–0x0F7F). MacroPad, running in the background, sees the press and runs the matching action.
+/// on. Each pad MacroPad knows gets its own block of codes (pad 0 from 0x0F00, pad 1 from 0x0F60, …), so what a pad
+/// sends also says which pad it is, even for two identical pads. MacroPad, running in the background, sees the press
+/// and runs the matching action.
 /// </summary>
 public static class Triggers
 {
     public const ushort First = 0x0F00;
-    public const ushort Last = 0x0F7F;
 
-    public static ushort Code(int layer, int slot) => (ushort)(First + (layer - 1) * 0x20 + slot);
+    /// <summary>Codes per pad: three layers of 0x20 slots.</summary>
+    public const int PadBlock = 0x60;
+
+    public const int MaxPads = 24;
+
+    public const ushort Last = First + PadBlock * MaxPads - 1;   // 0x17FF
+
+    public static ushort Code(int layer, int slot, int pad = 0)
+    {
+        if (pad is < 0 or >= MaxPads) throw new ArgumentOutOfRangeException(nameof(pad), pad, $"MacroPad tells {MaxPads} pads apart.");
+        return (ushort)(First + pad * PadBlock + (layer - 1) * 0x20 + slot);
+    }
 
     public static bool IsTrigger(ushort usage) => usage is >= First and <= Last;
+
+    /// <summary>Which pad's block a code is from.</summary>
+    public static int PadOf(ushort code) => (code - First) / PadBlock;
 
     public static string Key(ushort code) => code.ToString("X4");
 }

@@ -20,6 +20,13 @@ public partial class LayerViewModel(int number, IReadOnlyList<SlotViewModel> but
     public IEnumerable<SlotViewModel> All => Buttons.Concat(Knobs);
 }
 
+/// <summary>A pad in the header's list.</summary>
+public sealed record PadChoice(ConnectedPad Pad, PadRecord Record)
+{
+    public string Label => $"{Record.Label} · {Pad.Model}";
+    public override string ToString() => Label;
+}
+
 public partial class MainViewModel : ViewModelBase, IDisposable
 {
     public static IReadOnlyList<LedMode> LedModes { get; } = Enum.GetValues<LedMode>();
@@ -109,9 +116,10 @@ public partial class MainViewModel : ViewModelBase, IDisposable
     {
         // Before any window binds to them: the profile box only picks its selection out of a list that is already full.
         InitProfiles();
+        // Plugging a pad in or out: update the list, and connect again if the open pad went away.
         DeviceList.Local.Changed += (_, _) => Dispatcher.UIThread.Post(() =>
         {
-            if (_device is null && !IsBusy) _ = ConnectAsync();
+            if (!IsBusy) _ = RefreshPadsAsync();
         });
     }
 
@@ -147,39 +155,95 @@ public partial class MainViewModel : ViewModelBase, IDisposable
     [RelayCommand(CanExecute = nameof(CanConnect))]
     public async Task ConnectAsync()
     {
-        await Run("Connecting…", () =>
+        _device?.Dispose();
+        _device = null;
+        await RefreshPadsAsync(reopen: true);
+    }
+
+    /// <summary>Lists the pads plugged in now, and opens the chosen one if it isn't open (or <paramref name="reopen"/>).</summary>
+    async Task RefreshPadsAsync(bool reopen = false)
+    {
+        var connected = await Task.Run(Pads.Connected);
+        var known = Settings.Pads.Count;
+        var choices = connected.Select(c => new PadChoice(c, Settings.PadFor(c.Key))).OrderBy(c => c.Record.Number).ToList();
+        if (Settings.Pads.Count != known) SaveSettings();
+
+        var keep = SelectedPad?.Pad.Key;
+        _choosingPad = true;
+        PadChoices.Clear();
+        foreach (var c in choices) PadChoices.Add(c);
+        var choice = choices.FirstOrDefault(c => c.Pad.Key == keep) ?? choices.FirstOrDefault();
+        SelectedPad = choice;
+        _choosingPad = false;
+        HasSeveralPads = choices.Count > 1;
+
+        if (choice is null)
         {
             _device?.Dispose();
-            _device = MacroPadDevice.OpenFirst();
-        });
-        if (_device is null)
-        {
+            _device = null;
             IsConnected = false;
             DeviceStatus = OperatingSystem.IsLinux()
                 ? "No macropad found. Plugged in? On Linux, install the udev rule from the README."
                 : "No macropad found. Is it plugged in?";
             return;
         }
+        if (reopen || _device is null || _openKey != choice.Pad.Key) await OpenPadAsync(choice);
+    }
+
+    async Task OpenPadAsync(PadChoice choice)
+    {
+        await Run("Connecting…", () =>
+        {
+            _device?.Dispose();
+            _device = MacroPadDevice.Open(choice.Pad.Device);
+        });
+        _openKey = _device is null ? null : choice.Pad.Key;
+        if (_device is null)
+        {
+            IsConnected = false;
+            DeviceStatus = $"Couldn't open {choice.Label}.";
+            return;
+        }
         // The info reply carries the number of buttons and knobs (3 and 1 on the 3-key knob pad).
         int buttons = _device.Info[2] is > 0 and <= 15 ? _device.Info[2] : 3;
         int knobs = _device.Info[3] is <= 3 ? _device.Info[3] : 1;
-        DeviceStatus = $"Connected: {_device.Name} — {buttons} keys, {knobs} knob{(knobs == 1 ? "" : "s")}";
+        var who = HasSeveralPads ? $"{choice.Record.Label} ({_device.Name})" : _device.Name;
+        DeviceStatus = $"Connected: {who} — {buttons} keys, {knobs} knob{(knobs == 1 ? "" : "s")}";
         IsConnected = true;
-        BuildLayers(buttons, knobs);
+        BuildLayers(choice.Record.Number, buttons, knobs);
         await ReadAsync();
+    }
+
+    // The pads plugged in now, for the header's list; the one being edited.
+    public System.Collections.ObjectModel.ObservableCollection<PadChoice> PadChoices { get; } = [];
+    [ObservableProperty] public partial PadChoice? SelectedPad { get; set; }
+    [ObservableProperty] public partial bool HasSeveralPads { get; set; }
+    bool _choosingPad;
+    string? _openKey;
+
+    partial void OnSelectedPadChanged(PadChoice? oldValue, PadChoice? newValue)
+    {
+        if (_choosingPad || newValue is null || newValue.Pad.Key == _openKey) return;
+        if (Layers.SelectMany(l => l.All).Any(s => s.IsDirty))
+        {
+            Message = "Write or undo the changes on this pad before switching to another.";
+            Dispatcher.UIThread.Post(() => { _choosingPad = true; SelectedPad = oldValue; _choosingPad = false; });
+            return;
+        }
+        _ = OpenPadAsync(newValue);
     }
 
     bool CanConnect() => !IsBusy;
 
-    void BuildLayers(int buttons, int knobs)
+    void BuildLayers(int pad, int buttons, int knobs)
     {
         string[] actions = ["⟲ Turn left", "● Press", "⟳ Turn right"];
         var number = SelectedLayer?.Number ?? 1;
         Layers = Enumerable.Range(1, Protocol.LayerCount).Select(layer => new LayerViewModel(
             layer,
-            Enumerable.Range(0, buttons).Select(b => new SlotViewModel(layer, Protocol.ButtonSlot(b), $"Key {b + 1}")).ToList(),
+            Enumerable.Range(0, buttons).Select(b => new SlotViewModel(pad, layer, Protocol.ButtonSlot(b), $"Key {b + 1}")).ToList(),
             Enumerable.Range(0, knobs).SelectMany(k => Enumerable.Range(0, 3).Select(a =>
-                new SlotViewModel(layer, Protocol.KnobSlot(k, a), knobs == 1 ? actions[a] : $"Knob {k + 1} {actions[a]}"))).ToList()
+                new SlotViewModel(pad, layer, Protocol.KnobSlot(k, a), knobs == 1 ? actions[a] : $"Knob {k + 1} {actions[a]}"))).ToList()
         )).ToList();
         SelectedLayer = Layers[number - 1];
     }

@@ -144,6 +144,50 @@ public partial class MainViewModel
         Message = $"{slot.Label} now does the same as in Default.";
     }
 
+    /// <summary>The profile being edited, or all of them, as a profile file's text.</summary>
+    public string ExportProfiles(bool all) => ProfileFile.Write(all ? Settings.Profiles : [EditedProfile]);
+
+    public string ExportFileName(bool all) => (all ? "MacroPad profiles" : EditedProfile.Name) + ProfileFile.Extension;
+
+    /// <summary>
+    /// Adds the profiles in a profile file and switches to the first. Keys the profile uses that aren't MacroPad
+    /// actions on this pad yet become actions, marked as changes, so Write to pad makes them send their codes.
+    /// </summary>
+    public void ImportProfiles(string json)
+    {
+        if (Layers.SelectMany(l => l.All).Any(s => s.IsDirty))
+        {
+            Message = "Write or undo the changes on this profile before importing.";
+            return;
+        }
+        System.Collections.Generic.List<Profile> added;
+        try
+        {
+            added = ProfileFile.AddTo(Settings, ProfileFile.Read(json));
+        }
+        catch (FormatException e)
+        {
+            Message = e.Message;
+            return;
+        }
+        SaveSettings();
+        foreach (var p in added) SlotViewModel.ProfileNames.Add(p.Name);
+        ProfilesChanged?.Invoke();
+        ActiveProfileName = added[0].Name;
+
+        var marked = 0;
+        foreach (var slot in Layers.SelectMany(l => l.All))
+        {
+            if (slot.Kind == BindingKind.Action || Settings.ActionFor(added[0], slot.TriggerCode) is not { } action) continue;
+            slot.UseAction(action);
+            marked++;
+        }
+        var names = string.Join(", ", added.Select(p => p.Name));
+        Message = marked == 0
+            ? $"Imported {names}."
+            : $"Imported {names}. {marked} key(s) on this pad became actions: press Write to pad so they send their codes.";
+    }
+
     [RelayCommand]
     void AddProfile()
     {
