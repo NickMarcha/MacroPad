@@ -112,7 +112,11 @@ jobs:
         with:
           pkgname: macropad-bin
           pkgbuild: packaging/aur/PKGBUILD
-          assets: packaging/aur/macropad-bin.install
+          # The .gitignore keeps the release tarball that updpkgsums downloads out of the AUR repository, which
+          # refuses files over about 488 KB.
+          assets: |
+            packaging/aur/macropad-bin.install
+            packaging/aur/.gitignore
           updpkgsums: true
           commit_username: NickMarcha
           commit_email: 10127873+NickMarcha@users.noreply.github.com
