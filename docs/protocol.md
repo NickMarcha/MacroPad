@@ -55,8 +55,64 @@ light setting cannot be read back. Light writes are confirmed: layer 1 set to gr
 Key presses can be read in the background: the consumer-control collection (interface 1, report ID 5) can be
 opened on Windows while the OS also acts on it. Volume Up arrived as `05 E9 00` and then `05 00 00` on release.
 
+## Commands not to send
+
+The vendor app has two more commands. MacroPad never sends them, and nothing should without knowing exactly what
+it's doing:
+
+| Bytes | What the vendor app uses it for |
+|---|---|
+| `03 EF EF` | `KB_UpData_SoftWare`: puts the pad into **firmware-update mode** (its bootloader). |
+| `03 FC FC <n> <m> …` | `Set_Keyboard_Ver_SLOT`: switches the pad to another keyboard model/layout (15 variants). |
+
+There is **no command to switch the pad's active layer**. The vendor app's `SendLayer(int)` only changes which
+layer the app is editing (it reads that layer's lights). That's why MacroPad has its own profiles instead.
+
+The pad's keys never send anything on the configuration interface; presses come on interface 1 (keyboard, mouse
+and consumer-control reports). MacroPad's actions use consumer usages `0x0F00`–`0x17FF`, which no OS acts on:
+each pad gets a block of `0x60` (three layers of `0x20` slots), so the code says which pad a press came from.
+
+## Reproducing the analysis
+
+The vendor exe isn't in this repository (it's the vendor's). With a copy of it:
+
+- **Strings:** a Qt 5 app, the UI object names (`LED_Mode_*`, `delay_spinBox_*`, …), and the hidapi imports.
+- **Decompiling:** [REA](https://github.com/morluto/rea) over Ghidra 12.1.x, from the command line, without
+  installing REA into an agent:
+
+  ```sh
+  export GHIDRA_INSTALL_DIR=/path/to/ghidra_12.1.4_PUBLIC
+  export JAVA_HOME=/path/to/jdk-21-or-newer     # REA needs JAVA_HOME; a java on PATH alone isn't enough on Windows
+  rea() { npx -p rea-agents rea "$@"; }
+  rea search  MINI_KEYBOARD.exe hid_ --kind procedures --snapshot mk.snap --provider ghidra --format json
+  rea xrefs   MINI_KEYBOARD.exe 0x47af48 --snapshot mk.snap --provider ghidra --format json   # callers of hid_write
+  rea decompile MINI_KEYBOARD.exe 0x40bd20 --snapshot mk.snap --provider ghidra --format json
+  ```
+
+  Each call re-imports into Ghidra (about a minute); `--snapshot` keeps the analysis between calls. The binary has
+  no symbols: find functions through strings (`rea search … "Modify key value Flag"`, then `rea xrefs` on its
+  address) or through the Qt meta-call switch (`moc_widget.cpp` from the vendor archive lists the slots in order).
+
+Addresses in the 2025-03-18 build (SHA-256 `334ae835…0f717b6e`):
+
+| Address | What |
+|---|---|
+| `0x47af48` | `hid_write` import |
+| `0x4726e0` | finding the pad: VID/PID table at `0x4be19c`, opens interface 0 |
+| `0x472240` | the info command (`03 FB`) and reading the reply |
+| `0x40bd20` | writing keys and lights, then saving (`03 FE …`, `03 FD FE FF`) |
+| `0x414b70` | reading the configuration (`03 FA …`) |
+| `0x411170`, `0x410f40`, `0x411610`, `0x411c50`, `0x412110` | building keyboard, media, mouse and delay payloads |
+| `0x411860` | building the light payload; the value table starts at file offset `0xbca20` |
+| `0x479610` | the widget's Qt meta-call switch (case 5 `SendLayer`, case 16 firmware update) |
+| `0x415280` | `SendLayer`: UI only |
+
+For trying things on the pad, `tools/hid/probe.py` and `tools/hid/listen.py` are read-only. Test a write on a slot
+nobody uses (the original check used layer 3 key 1), read it back, and restore it.
+
 ## Not checked yet
 
 - The meaning of the info bytes past the first four.
 - Whether the knob's "turn left" is slot 16 or 18 on every pad (factory defaults are 16 = `3`,
   17 = `2`, 18 = `1`).
+- Pads other than `514C:8851`, and more than one pad at once.

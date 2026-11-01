@@ -3,3 +3,4 @@ packaging/** text eol=lf
 *.yml text eol=lf
 *.png binary
 *.ico binary
+*.sh text eol=lf

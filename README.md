@@ -204,6 +204,8 @@ covers the one-time AUR setup).
 - `packaging/`: the Linux desktop entry, icon and udev rule, and the AUR package.
 - `.github/ISSUE_TEMPLATE/`: the problem, hardware and connection forms.
 - Also in Core: profile files (`ProfileFile.cs`) and telling pads apart (`Pads.cs`).
+- `tools/`: read-only pad probes, the screenshot setup and Linux checks. [AGENTS.md](AGENTS.md) explains how the
+  pieces fit, for anyone (or any agent) working on MacroPad.
 
 ## Known limitations
 
