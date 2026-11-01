@@ -60,6 +60,12 @@ public sealed class Profile
 
     /// <summary>Actions by trigger code (hex, e.g. "0F23").</summary>
     public Dictionary<string, PadAction> Actions { get; set; } = [];
+
+    /// <summary>
+    /// What actions on <see cref="Target.Selected"/> work on in this profile, as last picked with a Select key here.
+    /// Each profile keeps its own, so an audio profile's headset doesn't follow you into a lights profile.
+    /// </summary>
+    public Target? SelectedTarget { get; set; }
 }
 
 /// <summary>

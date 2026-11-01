@@ -90,8 +90,13 @@ public class HomeAssistantTests
     public void Selected_target_survives_a_save()
     {
         var path = Path.Combine(Directory.CreateTempSubdirectory("macropad-settings").FullName, "settings.json");
-        new AppSettings { SelectedTarget = Office }.Save(path);
-        Assert.Equal(Office, AppSettings.Load(path).SelectedTarget);
+        var s = new AppSettings();
+        s.Default.SelectedTarget = Office;
+        s.Profiles.Add(new Profile { Name = "Audio" });
+        s.Save(path);
+        var loaded = AppSettings.Load(path);
+        Assert.Equal(Office, loaded.Default.SelectedTarget);
+        Assert.Null(loaded.Find("Audio")!.SelectedTarget);   // each profile keeps its own
     }
 
     [Fact]

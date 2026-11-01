@@ -39,8 +39,6 @@ public sealed class AppSettings
     /// <summary>Global keyboard shortcut for the next profile (Windows), e.g. "Ctrl+Alt+P"; null for none.</summary>
     public string? NextProfileShortcut { get; set; }
 
-    /// <summary>The room, light or audio control the knob controls, as last picked with a Select key.</summary>
-    public Target? SelectedTarget { get; set; }
 
     /// <summary>Show a pop-up with the room's brightness after each Home Assistant action.</summary>
     public bool ShowPopups { get; set; } = true;

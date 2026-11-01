@@ -59,7 +59,7 @@ public partial class MainViewModel
                 return;
             case PadCommand.Select:
                 if (action.Target is null || action.Target.Kind == TargetKind.Selected) return;
-                Settings.SelectedTarget = action.Target;
+                Settings.Active.SelectedTarget = action.Target;
                 SaveSettings();
                 Message = $"Knob controls {action.Target.Name}.";
                 await ShowPopupAsync(action.Target, "Selected for the knob");
@@ -69,7 +69,7 @@ public partial class MainViewModel
         if (action.Target is not { } target) return;
         if (target.Kind == TargetKind.Selected)
         {
-            if (Settings.SelectedTarget is not { } selected)
+            if (Settings.Active.SelectedTarget is not { } selected)
             {
                 Message = "Nothing selected yet: press a Select key first.";
                 return;
