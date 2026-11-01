@@ -18,6 +18,9 @@ public sealed class Updater(HttpClient http, string repo = Updater.Repository)
     const string OldSuffix = ".old";
     const string NewSuffix = ".new";
 
+    /// <summary>Passed to the updated binary with the old process's id; see <see cref="WaitForPreviousToExit"/>.</summary>
+    public const string AfterUpdateArgument = "--after-update";
+
     public static string AssetName =>
         OperatingSystem.IsWindows() ? "MacroPad-win-x64.exe" : "MacroPad-linux-x64";
 
@@ -82,7 +85,12 @@ public sealed class Updater(HttpClient http, string repo = Updater.Repository)
         if (!OperatingSystem.IsWindows())
             File.SetUnixFileMode(next, File.GetUnixFileMode(executable));
         var old = executable + OldSuffix;
-        File.Delete(old);
+        // A previous .old can still be in use (its process hasn't exited): step aside to a fresh name.
+        if (File.Exists(old))
+        {
+            try { File.Delete(old); }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException) { old = $"{old}-{Environment.TickCount64}"; }
+        }
         File.Move(executable, old);
         try
         {
@@ -96,15 +104,30 @@ public sealed class Updater(HttpClient http, string repo = Updater.Repository)
         return executable;
     }
 
-    /// <summary>Starts the updated binary; the caller then exits.</summary>
-    public static void Restart(string executable) =>
-        Process.Start(new ProcessStartInfo(executable) { UseShellExecute = false, WorkingDirectory = Path.GetDirectoryName(executable)! });
+    /// <summary>With <see cref="AfterUpdateArgument"/> &lt;pid&gt; in the arguments, waits for that process to end.</summary>
+    public static void WaitForPreviousToExit(string[] args, TimeSpan timeout)
+    {
+        var i = Array.IndexOf(args, AfterUpdateArgument);
+        if (i < 0 || i + 1 >= args.Length || !int.TryParse(args[i + 1], out var pid)) return;
+        try
+        {
+            using var previous = Process.GetProcessById(pid);
+            previous.WaitForExit(timeout);
+        }
+        catch (ArgumentException) { /* already gone */ }
+        catch (InvalidOperationException) { }
+    }
 
-    /// <summary>Removes what a previous update left behind. Call at start.</summary>
+    /// <summary>Removes what previous updates left behind (exe.old, exe.old-123, exe.new). Call at start.</summary>
     public static void CleanUp(string? executable)
     {
         if (executable is null) return;
-        foreach (var leftover in new[] { executable + OldSuffix, executable + NewSuffix })
+        var dir = Path.GetDirectoryName(executable)!;
+        var name = Path.GetFileName(executable);
+        IEnumerable<string> leftovers;
+        try { leftovers = Directory.GetFiles(dir, name + OldSuffix + "*").Append(executable + NewSuffix); }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { return; }
+        foreach (var leftover in leftovers)
         {
             try { File.Delete(leftover); }
             catch (Exception e) when (e is IOException or UnauthorizedAccessException) { /* still in use; next start */ }

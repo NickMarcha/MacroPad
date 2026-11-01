@@ -36,6 +36,9 @@ public partial class MainViewModel : ViewModelBase, IDisposable
 
     [ObservableProperty] public partial string UpdateText { get; set; } = "";
 
+    /// <summary>Raised when the app should quit (after an update), so it shuts down the normal way.</summary>
+    public event Action? ExitRequested;
+
     [ObservableProperty, NotifyCanExecuteChangedFor(nameof(UpdateCommand))]
     public partial bool CanUpdate { get; set; }
 
@@ -66,18 +69,23 @@ public partial class MainViewModel : ViewModelBase, IDisposable
     {
         if (_release is null || Install.ExecutablePath is not { } exe) return;
         CanUpdate = false;
-        UpdateText = $"Downloading {_release.Version}…";
+        var version = _release.Version;
+        UpdateText = $"Downloading {version}…";
+        // Progress reports arrive later on the UI thread; once the download is over they must not cover the outcome.
+        var downloading = true;
         try
         {
-            var progress = new Progress<double>(f => UpdateText = $"Downloading {_release.Version}… {f:P0}");
+            var progress = new Progress<double>(f => { if (downloading) UpdateText = $"Downloading {version}… {f:P0}"; });
             await new Updater(Http).InstallAsync(_release, exe, progress);
-            _device?.Dispose();
-            _device = null;
-            Updater.Restart(exe);
-            Environment.Exit(0);
+            downloading = false;
+            UpdateText = $"Restarting into {version}…";
+            // Shut down normally; Program.Main starts the new copy once this one is gone.
+            Program.RestartWith = exe;
+            ExitRequested?.Invoke();
         }
         catch (Exception e)
         {
+            downloading = false;
             UpdateText = $"Update failed: {e.Message}";
             CanUpdate = true;
         }

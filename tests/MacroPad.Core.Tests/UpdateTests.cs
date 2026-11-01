@@ -88,6 +88,36 @@ public class UpdateTests : IDisposable
         Assert.Equal("new version", File.ReadAllText(exe));
     }
 
+    [Fact]
+    public async Task A_locked_old_copy_does_not_block_an_update()
+    {
+        var exe = Path.Combine(_dir, "MacroPad.exe");
+        File.WriteAllText(exe, "running");
+        File.WriteAllText(exe + ".old", "previous");
+        var payload = "newer"u8.ToArray();
+        var release = new ReleaseInfo(new AppVersion(9, 0, 0), "", "", "", "https://example.invalid/bin", payload.Length,
+            Convert.ToHexStringLower(SHA256.HashData(payload)));
+
+        // The previous update's process still holds its file, as on Windows when it hasn't exited.
+        using (new FileStream(exe + ".old", FileMode.Open, FileAccess.Read, FileShare.None))
+        {
+            await new Updater(new HttpClient(new Fixed(payload))).InstallAsync(release, exe);
+        }
+        Assert.Equal("newer", File.ReadAllText(exe));
+
+        Updater.CleanUp(exe);
+        Assert.Equal(["MacroPad.exe"], Directory.GetFiles(_dir).Select(Path.GetFileName));
+    }
+
+    [Fact]
+    public void Waits_only_when_started_by_an_update()
+    {
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        Updater.WaitForPreviousToExit([], TimeSpan.FromSeconds(5));
+        Updater.WaitForPreviousToExit([Updater.AfterUpdateArgument, "999999"], TimeSpan.FromSeconds(5));
+        Assert.True(watch.Elapsed < TimeSpan.FromSeconds(2));
+    }
+
     sealed class Fixed(byte[] body) : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>

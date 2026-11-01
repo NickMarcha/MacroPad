@@ -48,6 +48,7 @@ public partial class App : Application
             _vm.ProfilesChanged += UpdateTrayMenu;
             _vm.ShowWindowRequested += ShowWindow;
             _vm.ShortcutChanged += RegisterShortcut;
+            _vm.ExitRequested += Quit;
             SingleInstance.Listen(args => Dispatcher.UIThread.Post(() => _vm.HandleCommandLine(args)), _stop.Token);
             var toast = new ToastWindow { DataContext = _vm.Toast };
             _vm.Toast.Shown += toast.Present;
