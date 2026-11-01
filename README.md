@@ -8,8 +8,9 @@ MacroPad does two things:
 
 1. **Programs the pad.** Keyboard shortcuts, macros, media keys, mouse actions and the lights are written to the
    pad itself. The pad then works on any computer, without MacroPad running.
-2. **Turns pad keys into actions.** A key or the knob can control your lights through Home Assistant and your audio
-   through Bragi, or switch MacroPad's **profiles** (virtual layers that change what those keys do). For these,
+2. **Turns pad keys into actions.** A key or the knob can control your lights through
+   [Home Assistant](https://github.com/home-assistant/core) and your audio through
+   [Bragi](https://github.com/NickMarcha/bragi), or switch MacroPad's **profiles** (virtual layers that change what those keys do). For these,
    MacroPad runs in the tray and shows a pop-up for each change.
 
 ![The Pad tab: layers, the profile, and each key's action](docs/images/pad.png)
