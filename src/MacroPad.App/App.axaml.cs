@@ -97,7 +97,9 @@ public partial class App : Application
             _window = new MainWindow { DataContext = _vm };
             _window.Closing += (_, e) =>
             {
-                if (Quitting || !_vm!.KeepRunningInTray)
+                // Quitting closes the window itself; let it.
+                if (Quitting) return;
+                if (!_vm!.KeepRunningInTray)
                 {
                     Quit();
                     return;
@@ -114,6 +116,7 @@ public partial class App : Application
 
     void Quit()
     {
+        if (Quitting) return;
         Quitting = true;
         _desktop?.Shutdown();
     }
