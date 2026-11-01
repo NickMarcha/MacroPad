@@ -209,7 +209,8 @@ covers the one-time AUR setup).
 
 - The pad cannot report its current light setting, so the lights panel shows what you are about to set, not what is
   on the pad now.
-- Tested on Windows. The Linux build compiles and packages but has not been run against the pad on Linux yet.
+- Tested on Windows 11 and on CachyOS (KDE Plasma, the AUR package). Other Linux desktops should work but haven't
+  been tried; on X11 the pop-up is a notification window, which window managers keep on top.
 - The Windows build is not code-signed, so SmartScreen warns the first time it runs.
 - Modifiers you record are always the left-hand ones.
 - Keys the OS takes before the app sees them (Win, Alt+Tab, Print Screen on some desktops) need the "add a key by
