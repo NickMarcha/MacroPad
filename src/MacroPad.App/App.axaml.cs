@@ -67,7 +67,7 @@ public partial class App : Application
     async System.Threading.Tasks.Task StartAsync()
     {
         MenuShortcut.Refresh();
-        await _vm!.StartHomeAssistantAsync();
+        await _vm!.StartServicesAsync();
         UpdateTrayMenu();
         RegisterShortcut();
         // A start with --profile (when no MacroPad was running yet) switches once everything is up.

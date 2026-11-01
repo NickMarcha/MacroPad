@@ -26,7 +26,7 @@ public partial class SlotViewModel : ViewModelBase
     public static IReadOnlyList<PadCommand> PadCommands { get; } = Enum.GetValues<PadCommand>();
 
     /// <summary>Areas and lights from Home Assistant, filled in by the main view model when it connects.</summary>
-    public static ObservableCollection<HaTarget> HaTargets { get; } = [HaTarget.Selected];
+    public static ObservableCollection<Target> Targets { get; } = [Target.Selected];
 
     /// <summary>Profile names, kept up to date by the main view model.</summary>
     public static ObservableCollection<string> ProfileNames { get; } = [];
@@ -69,10 +69,10 @@ public partial class SlotViewModel : ViewModelBase
     // Action (handled by MacroPad)
     [ObservableProperty, NotifyPropertyChangedFor(nameof(IsStepped), nameof(NeedsTarget), nameof(NeedsProfile))]
     public partial PadCommand PadCommand { get; set; }
-    [ObservableProperty] public partial HaTarget? HaTarget { get; set; }
+    [ObservableProperty] public partial Target? Target { get; set; }
     [ObservableProperty] public partial decimal HaStep { get; set; } = 5;
     [ObservableProperty] public partial string? ProfileChoice { get; set; }
-    public bool IsStepped => PadCommand is PadCommand.Brighter or PadCommand.Dimmer;
+    public bool IsStepped => PadCommand is PadCommand.Up or PadCommand.Down;
     public bool NeedsTarget => PadCommand is not (PadCommand.NextProfile or PadCommand.Profile);
     public bool NeedsProfile => PadCommand == PadCommand.Profile;
 
@@ -84,7 +84,7 @@ public partial class SlotViewModel : ViewModelBase
     {
         PadCommand.NextProfile => new PadAction(PadCommand),
         PadCommand.Profile => ProfileChoice is null ? null : new PadAction(PadCommand, ProfileName: ProfileChoice),
-        _ => HaTarget is null ? null : new PadAction(PadCommand, HaTarget, (int)HaStep),
+        _ => Target is null ? null : new PadAction(PadCommand, Target, (int)HaStep),
     };
 
     // Keyboard
@@ -145,13 +145,13 @@ public partial class SlotViewModel : ViewModelBase
                 break;
             case MediaBinding m when Triggers.IsTrigger(m.Usage):
                 Kind = BindingKind.Action;
-                HaTarget = null;
+                Target = null;
                 ProfileChoice = null;
                 if (action is not null)
                 {
-                    if (action.Target is not null && !HaTargets.Contains(action.Target)) HaTargets.Add(action.Target);
+                    if (action.Target is not null && !Targets.Contains(action.Target)) Targets.Add(action.Target);
                     PadCommand = action.Command;
-                    HaTarget = action.Target;
+                    Target = action.Target;
                     HaStep = action.Step;
                     ProfileChoice = action.ProfileName;
                 }

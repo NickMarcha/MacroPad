@@ -1,10 +1,8 @@
-using MacroPad.Core.HomeAssistant;
-
 namespace MacroPad.Core.Tests;
 
-public class BrightnessDialTests
+public class LevelDialTests
 {
-    static readonly HaTarget Panel = new(HaTargetKind.Light, "light.living_panel", "Living Panel");
+    static readonly Target Panel = new(TargetKind.Light, "light.living_panel", "Living Panel");
 
     sealed class FakeLight
     {
@@ -12,9 +10,9 @@ public class BrightnessDialTests
         public List<int> Sent = [];
         public TimeSpan Now;
         public TaskCompletionSource? Hold;
-        public LightLevel Level = new(1, 1, 100);
+        public Level Level = Level.Lights(1, 1, 100);
 
-        public BrightnessDial Dial() => new(
+        public LevelDial Dial() => new(
             _ => { Reads++; return Task.FromResult(Level); },
             async (_, b) => { Sent.Add(b); if (Hold is not null) await Hold.Task; },
             () => Now);
@@ -50,7 +48,7 @@ public class BrightnessDialTests
     {
         var light = new FakeLight();
         var dial = light.Dial();
-        var seen = new List<LightLevel>();
+        var seen = new List<Level>();
         dial.Changed += (_, level) => seen.Add(level);
         await dial.TurnAsync(Panel, -250);
         await dial.TurnAsync(Panel, 300);
@@ -60,13 +58,27 @@ public class BrightnessDialTests
     }
 
     [Fact]
+    public async Task Audio_uses_percent_and_keeps_mute()
+    {
+        var light = new FakeLight { Level = new Level(false, 60, 100, 150) };   // muted at 60%
+        var dial = light.Dial();
+        Level? seen = null;
+        dial.Changed += (_, level) => seen = level;
+        await dial.TurnAsync(Panel, 5);            // 5/255 of full: 2%
+        await dial.TurnAsync(Panel, 40 * 8);       // fast: clamps at 150%
+        Assert.Equal([62, 150], light.Sent);
+        Assert.False(seen!.IsOn);                  // turning doesn't unmute
+        Assert.Equal(150, seen.MaxPercent);
+    }
+
+    [Fact]
     public async Task Reads_again_after_a_pause_or_when_forgotten()
     {
         var light = new FakeLight();
         var dial = light.Dial();
         await dial.TurnAsync(Panel, 5);
-        light.Now += BrightnessDial.Fresh + TimeSpan.FromSeconds(1);
-        light.Level = new LightLevel(1, 1, 50);   // someone dimmed it in the meantime
+        light.Now += LevelDial.Fresh + TimeSpan.FromSeconds(1);
+        light.Level = Level.Lights(1, 1, 50);   // someone dimmed it in the meantime
         await dial.TurnAsync(Panel, 5);
         dial.Forget();
         await dial.TurnAsync(Panel, 5);

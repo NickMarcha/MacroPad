@@ -8,12 +8,23 @@ namespace MacroPad.Core;
 
 /// <summary>
 /// The app's settings, in settings.json under %APPDATA%\MacroPad (Windows) or ~/.config/macropad (Linux). The Home
-/// Assistant token is encrypted for the current Windows user (DPAPI); on Linux the file is readable only by its owner.
+/// Assistant token and the Bragi key are encrypted for the current Windows user (DPAPI); on Linux the file is readable
+/// only by its owner.
 /// </summary>
 public sealed class AppSettings
 {
     public string? HomeAssistantUrl { get; set; }
     public string? HomeAssistantToken { get; set; }
+
+    public string? BragiUrl { get; set; }
+    public string? BragiApiKey { get; set; }
+
+    [JsonIgnore]
+    public string? BragiKey
+    {
+        get => Unprotect(BragiApiKey);
+        set => BragiApiKey = string.IsNullOrWhiteSpace(value) ? null : Protect(value.Trim());
+    }
 
     /// <summary>MacroPad's profiles. The first is the Default every other profile falls back to.</summary>
     public List<Profile> Profiles { get; set; } = [new Profile()];
@@ -28,8 +39,8 @@ public sealed class AppSettings
     /// <summary>Global keyboard shortcut for the next profile (Windows), e.g. "Ctrl+Alt+P"; null for none.</summary>
     public string? NextProfileShortcut { get; set; }
 
-    /// <summary>The room or light the knob controls, as last picked with a Select key.</summary>
-    public HaTarget? SelectedTarget { get; set; }
+    /// <summary>The room, light or audio control the knob controls, as last picked with a Select key.</summary>
+    public Target? SelectedTarget { get; set; }
 
     /// <summary>Show a pop-up with the room's brightness after each Home Assistant action.</summary>
     public bool ShowPopups { get; set; } = true;

@@ -1,28 +1,28 @@
 using System.Text.Json.Serialization;
-using MacroPad.Core.HomeAssistant;
 
 namespace MacroPad.Core;
 
 /// <summary>
-/// What MacroPad does when a pad slot sends its trigger code. Select remembers a Home Assistant target for actions on
-/// <see cref="HaTarget.Selected"/> (the knob); NextProfile and Profile switch MacroPad's active profile.
+/// What MacroPad does when a pad slot sends its trigger code. Toggle, TurnOn and TurnOff switch lights or mute audio;
+/// Up and Down turn brightness or volume (the knob); Select remembers a target for actions on
+/// <see cref="Target.Selected"/>; NextProfile and Profile switch MacroPad's active profile.
 /// </summary>
-public enum PadCommand { Select, Toggle, TurnOn, TurnOff, Brighter, Dimmer, NextProfile, Profile }
+public enum PadCommand { Select, Toggle, TurnOn, TurnOff, Up, Down, NextProfile, Profile }
 
 /// <summary>
-/// One action. <paramref name="Target"/> is for the Home Assistant commands. <paramref name="Step"/> is for Brighter and
-/// Dimmer, in Home Assistant's brightness units: 1 is 1/255 of full brightness, the finest step a light can take.
-/// <paramref name="ProfileName"/> is for <see cref="PadCommand.Profile"/>.
+/// One action. <paramref name="Target"/> is what it works on. <paramref name="Step"/> is for Up and Down, in 1/255ths
+/// of full scale (see <see cref="LevelDial"/>); quick knob turns multiply it. <paramref name="ProfileName"/> is for
+/// <see cref="PadCommand.Profile"/>.
 /// </summary>
 public sealed record PadAction(
     [property: JsonConverter(typeof(JsonStringEnumConverter<PadCommand>))] PadCommand Command,
-    HaTarget? Target = null,
+    Target? Target = null,
     int Step = 5,
     string? ProfileName = null)
 {
     public const int MaxStep = 255;
 
-    public bool IsHomeAssistant => Command is not (PadCommand.NextProfile or PadCommand.Profile);
+    public bool UsesTarget => Command is not (PadCommand.NextProfile or PadCommand.Profile);
 
     public string Describe()
     {
@@ -33,14 +33,16 @@ public sealed record PadAction(
     string Words()
     {
         var name = Target?.Name ?? "(nothing)";
+        var audio = Target?.Kind == TargetKind.Audio;
+        var light = Target?.IsLight == true;
         return Command switch
         {
             PadCommand.Select => $"Knob controls {name}",
-            PadCommand.Toggle => $"Toggle {name}",
-            PadCommand.TurnOn => $"Turn on {name}",
-            PadCommand.TurnOff => $"Turn off {name}",
-            PadCommand.Brighter => $"{name} brighter ({Step}/255)",
-            PadCommand.Dimmer => $"{name} dimmer ({Step}/255)",
+            PadCommand.Toggle => audio ? $"Mute or unmute {name}" : $"Toggle {name}",
+            PadCommand.TurnOn => audio ? $"Unmute {name}" : $"Turn on {name}",
+            PadCommand.TurnOff => audio ? $"Mute {name}" : $"Turn off {name}",
+            PadCommand.Up => $"{name} {(audio ? "louder" : light ? "brighter" : "up")} (step {Step})",
+            PadCommand.Down => $"{name} {(audio ? "quieter" : light ? "dimmer" : "down")} (step {Step})",
             PadCommand.NextProfile => "Next profile",
             PadCommand.Profile => $"Profile {ProfileName ?? "(none)"}",
             _ => Command.ToString(),

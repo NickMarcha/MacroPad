@@ -1,4 +1,4 @@
-namespace MacroPad.Core.HomeAssistant;
+namespace MacroPad.Core;
 
 /// <summary>
 /// Makes brightness steps grow with turning speed, like mouse acceleration: a click on its own moves exactly the

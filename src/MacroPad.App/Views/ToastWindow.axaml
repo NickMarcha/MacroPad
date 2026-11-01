@@ -16,7 +16,7 @@
                 <TextBlock Grid.Column="1" Text="{Binding Detail}" FontSize="14" Opacity="0.85" VerticalAlignment="Center" />
             </Grid>
             <TextBlock Text="{Binding Caption}" FontSize="12" Opacity="0.6" />
-            <Slider Minimum="0" Maximum="100" Value="{Binding Percent}" IsVisible="{Binding HasLevel}" Margin="0,-4,0,-8" />
+            <Slider Minimum="0" Maximum="{Binding MaxPercent}" Value="{Binding Percent}" IsVisible="{Binding HasLevel}" Margin="0,-4,0,-8" />
         </StackPanel>
     </Border>
 </Window>

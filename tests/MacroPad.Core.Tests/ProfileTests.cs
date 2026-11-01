@@ -4,8 +4,8 @@ namespace MacroPad.Core.Tests;
 
 public class ProfileTests
 {
-    static readonly HaTarget Office = new(HaTargetKind.Area, "office", "Office");
-    static readonly HaTarget Kitchen = new(HaTargetKind.Area, "kitchen", "Kitchen");
+    static readonly Target Office = new(TargetKind.Area, "office", "Office");
+    static readonly Target Kitchen = new(TargetKind.Area, "kitchen", "Kitchen");
     static readonly ushort Key1 = Triggers.Code(1, 1);
     static readonly ushort Knob = Triggers.Code(1, 17);
 

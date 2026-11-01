@@ -15,8 +15,9 @@ this app running.
     the steps by pressing keys, or pick keys by name (F13–F24, or keys the OS grabs);
   - a media key (volume, play/pause, next track, …);
   - a mouse click, wheel or move, with modifiers held;
-  - a **MacroPad action**: toggle, turn on or off, or step the brightness of a Home Assistant area or light;
-    *select* a room for the knob to control; or switch MacroPad's profile.
+  - a **MacroPad action**: toggle, turn on or off, or turn up and down a Home Assistant area or light, or a
+    [Bragi](#bragi-audio) audio control (mute, volume); *select* a target for the knob to control; or switch
+    MacroPad's profile.
 - Sets the lights per layer (mode and color).
 - **Profiles**: MacroPad's own layers of actions. Switch them from the tray menu, a pad key, a keyboard shortcut or
   `macropad --profile <name|next>`.
@@ -108,11 +109,26 @@ jumped.) It reads the light again after three seconds without a click. On an are
 the same brightness.
 
 A room picker setup, for example: keys 1–3 *Select* Office, Living Room and Bedroom; the knob's press is *Toggle*
-and its turns *Dimmer* and *Brighter*, all on the target *Selected room*. The keys then only choose which room the knob
+and its turns *Down* and *Up*, all on the target *Selected target*. The keys then only choose which room the knob
 works on (MacroPad remembers the choice across restarts).
 
 Settings are in `%APPDATA%\MacroPad\settings.json` (Windows) or `~/.config/macropad/settings.json` (Linux). The
-token is encrypted for your Windows user; on Linux the file is readable only by you.
+Home Assistant token and the Bragi key are encrypted for your Windows user; on Linux the file is readable only by
+you.
+
+## Bragi (audio)
+
+[Bragi](https://bragi.example.ts.net/api/v1/help) is a PipeWire audio mixer with a REST API. Under Settings →
+**Bragi (audio)**, enter its address and an API key (Bragi's dashboard: the lock button, Security, *API
+connections*) and press Connect. Every control becomes a target: a headset's speakers and mic, and each network
+peer's outgoing and incoming audio.
+
+- *Toggle* mutes and unmutes; *Turn on* unmutes; *Turn off* mutes.
+- *Up* and *Down* turn the volume, 0–150%, with the same acceleration as for lights. Turning doesn't unmute.
+- *Select* works for audio too, so one knob can control a room or a headset, whichever was picked last.
+- The pop-up shows the volume (and *Muted*), with a slider up to 150%.
+
+A control that isn't streaming (Bragi's 409) says so in the pop-up instead of changing.
 
 ## Profiles
 
@@ -135,8 +151,9 @@ the profile for the app in front.
 ## Layout
 
 - `src/MacroPad.Core`: protocol encoding (`Protocol.cs`), binding types, HID access through
-  HidSharp (`MacroPadDevice.cs`), the background listener (`PadListener.cs`), settings (`AppSettings.cs`), the
-  Home Assistant client (`HomeAssistant/`), key and media names, and install detection and self-update (`Updates/`).
+  HidSharp (`MacroPadDevice.cs`), the background listener (`PadListener.cs`), settings (`AppSettings.cs`),
+  targets and the service interface (`Target.cs`), the knob's dial (`LevelDial.cs`), the Home Assistant client
+  (`HomeAssistant/`), the Bragi client (`Bragi/`), key and media names, and install detection and self-update (`Updates/`).
 - `src/MacroPad.App`: the Avalonia UI.
 - `tests/MacroPad.Core.Tests`: protocol tests built from real reports the pad sent, and update tests.
 - `packaging/`: the Linux desktop entry, icon and udev rule, and the AUR package.
