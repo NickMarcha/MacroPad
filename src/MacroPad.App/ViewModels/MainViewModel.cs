@@ -42,19 +42,32 @@ public partial class MainViewModel : ViewModelBase, IDisposable
     [ObservableProperty, NotifyCanExecuteChangedFor(nameof(UpdateCommand))]
     public partial bool CanUpdate { get; set; }
 
-    /// <summary>Asks GitHub for the newest release. Quietly does nothing when offline.</summary>
-    public async Task CheckForUpdatesAsync()
+    [RelayCommand]
+    async Task CheckForUpdatesNowAsync()
     {
-        if (Install.Kind == InstallKind.Development) return;
+        if (Install.Kind == InstallKind.Development)
+        {
+            UpdateText = "Development builds don't update.";
+            return;
+        }
+        UpdateText = "Checking…";
+        if (!await CheckForUpdatesAsync()) UpdateText = "Couldn't reach GitHub.";
+        else if (!CanUpdate && (_release is null || !(_release.Version > Install.Version))) UpdateText = $"Up to date ({VersionText}).";
+    }
+
+    /// <summary>Asks GitHub for the newest release. False when it couldn't be reached.</summary>
+    public async Task<bool> CheckForUpdatesAsync()
+    {
+        if (Install.Kind == InstallKind.Development) return true;
         try
         {
             _release = await new Updater(Http).GetLatestAsync();
         }
         catch (Exception e) when (e is System.Net.Http.HttpRequestException or TaskCanceledException)
         {
-            return;
+            return false;
         }
-        if (_release is null || !(_release.Version > Install.Version)) return;
+        if (_release is null || !(_release.Version > Install.Version)) return true;
         UpdateText = Install.Kind switch
         {
             InstallKind.Portable => $"Version {_release.Version} is out.",
@@ -62,6 +75,7 @@ public partial class MainViewModel : ViewModelBase, IDisposable
             _ => $"Version {_release.Version} is out: download it from GitHub.",
         };
         CanUpdate = Install.CanSelfUpdate && _release.DownloadUrl is not null;
+        return true;
     }
 
     [RelayCommand(CanExecute = nameof(CanUpdate))]

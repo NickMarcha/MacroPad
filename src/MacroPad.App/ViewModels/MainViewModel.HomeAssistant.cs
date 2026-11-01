@@ -67,6 +67,29 @@ public partial class MainViewModel
 
     public bool CanStartAtLogin => Autostart.IsSupported;
 
+    public bool CanShowInMenu => MenuShortcut.IsSupported;
+    public string MenuShortcutLabel => MenuShortcut.Label;
+    public string MenuShortcutNote => MenuShortcut.Note;
+    public string SettingsPath => AppSettings.FilePath;
+
+    public bool ShowInMenu
+    {
+        get => MenuShortcut.IsEnabled;
+        set
+        {
+            try
+            {
+                MenuShortcut.Set(value);
+                Message = value ? "Added MacroPad to the menu." : "Removed MacroPad from the menu.";
+            }
+            catch (Exception e)
+            {
+                Message = $"Couldn't change the menu shortcut: {e.Message}";
+            }
+            OnPropertyChanged();
+        }
+    }
+
     public bool StartAtLogin
     {
         get => Autostart.IsEnabled;

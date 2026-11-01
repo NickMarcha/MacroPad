@@ -34,8 +34,17 @@ Tested with USB ID `514C:8851`. The app also looks for the other IDs the vendor 
 - **Arch / CachyOS:** `yay -S macropad-bin` (or `paru`). It installs the udev rule too, so the pad works without
   root. Updates come through pacman like any other package.
 - **Windows:** download `MacroPad-win-x64.exe` from the
-  [latest release](https://github.com/NickMarcha/MacroPad/releases/latest) and run it from any folder.
-- **Other Linux:** download `MacroPad-linux-x64`, `chmod +x` it, and install the udev rule (below).
+  [latest release](https://github.com/NickMarcha/MacroPad/releases/latest), put it in a folder of its own and run
+  it. Under Settings, tick *Show MacroPad in the Start menu* to find it by search, and *Start at login* to keep it
+  in the tray.
+- **Other Linux:** download `MacroPad-linux-x64`, `chmod +x` it, and install the udev rule (below). Settings →
+  *Show MacroPad in the applications menu* adds a menu entry.
+
+## The window
+
+- **Pad**: the pad's layers, the MacroPad profile, each key and knob action, and the lights.
+- **Settings**: Home Assistant, running in the background, the next-profile shortcut, pop-ups, the Start menu
+  shortcut, and the version with *Check for updates*.
 
 ## Updates
 

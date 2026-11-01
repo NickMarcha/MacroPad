@@ -66,6 +66,7 @@ public partial class App : Application
 
     async System.Threading.Tasks.Task StartAsync()
     {
+        MenuShortcut.Refresh();
         await _vm!.StartHomeAssistantAsync();
         UpdateTrayMenu();
         RegisterShortcut();

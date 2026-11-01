@@ -9,6 +9,8 @@
     <ApplicationIcon>Assets\macropad.ico</ApplicationIcon>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <InvariantGlobalization>true</InvariantGlobalization>
+    <!-- Source-generated COM for the Start menu shortcut (MenuShortcut.cs). -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
   </PropertyGroup>
 
