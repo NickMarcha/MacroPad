@@ -18,6 +18,8 @@ public partial class ToastWindow : Window
     public ToastWindow()
     {
         InitializeComponent();
+        // On X11 (Linux): a notification window stays on top and out of the taskbar. Before the first Show.
+        Trace.Write("pop-up: " + X11Notification.Apply(this));
         _hide.Tick += (_, _) =>
         {
             _hide.Stop();
