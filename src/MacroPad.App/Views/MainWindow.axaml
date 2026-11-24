@@ -177,14 +177,14 @@
                                       <ItemsControl ItemsSource="{Binding SelectedLayer.Buttons}" ItemTemplate="{StaticResource SlotButton}">
                                           <ItemsControl.ItemsPanel>
                                               <ItemsPanelTemplate>
-                                                  <StackPanel Spacing="6" />
+                                                  <UniformGrid Columns="{Binding SelectedLayer.KeyColumns}" ColumnSpacing="6" RowSpacing="6" />
                                               </ItemsPanelTemplate>
                                           </ItemsControl.ItemsPanel>
                                       </ItemsControl>
                                   </StackPanel>
 
                                   <StackPanel Spacing="8">
-                                      <TextBlock Text="KNOB" Classes="heading" />
+                                      <TextBlock Text="{Binding SelectedLayer.KnobHeading}" Classes="heading" />
                                       <ItemsControl ItemsSource="{Binding SelectedLayer.Knobs}" ItemTemplate="{StaticResource SlotButton}">
                                           <ItemsControl.ItemsPanel>
                                               <ItemsPanelTemplate>
@@ -194,7 +194,7 @@
                                       </ItemsControl>
                                   </StackPanel>
 
-                                  <StackPanel Spacing="8">
+                                  <StackPanel Spacing="8" IsVisible="{Binding HasLights}">
                                       <TextBlock Text="LIGHTS (THIS LAYER)" Classes="heading" />
                                       <Grid ColumnDefinitions="*,8,*">
                                           <ComboBox HorizontalAlignment="Stretch" ItemsSource="{x:Static vm:MainViewModel.LedModes}" SelectedItem="{Binding LedMode}">
@@ -292,7 +292,7 @@
                                               </StackPanel>
                                           </StackPanel>
 
-                                          <StackPanel Spacing="6">
+                                          <StackPanel Spacing="6" IsVisible="{Binding HasDelay}">
                                               <TextBlock Text="DELAY BETWEEN STEPS (MS)" Classes="heading" />
                                               <NumericUpDown Value="{Binding DelayMs}" Minimum="0" Maximum="6000" Increment="10" FormatString="0" Width="160" HorizontalAlignment="Left" />
                                           </StackPanel>

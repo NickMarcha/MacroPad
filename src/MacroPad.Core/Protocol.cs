@@ -12,8 +12,11 @@ public static class Protocol
     public const int LayerCount = 3;
     public const int MaxChords = 18;
 
-    /// <summary>Slots the device reports per layer: buttons 1–15, then knob actions 16–24.</summary>
-    public const int SlotCount = 18;
+    public const int MaxButtons = 15;
+    public const int MaxKnobs = 3;
+
+    /// <summary>Slots to read per layer: buttons 1–15, then three per knob from 16 (18 for one knob, 21 for two).</summary>
+    public static int SlotCount(int knobs) => MaxButtons + 3 * Math.Max(knobs, 1);
 
     const byte CmdWrite = 0xFE;
     const byte CmdCommit = 0xFD;
@@ -34,7 +37,7 @@ public static class Protocol
     public static byte[] Info() => Packet(CmdInfo, 0xFB, 0xFB);
 
     /// <summary>Asks for every slot of a layer (1-based); the device answers with <paramref name="slots"/> reports.</summary>
-    public static byte[] ReadLayer(int layer, int slots = SlotCount) => Packet(CmdRead, (byte)slots, 0, (byte)layer);
+    public static byte[] ReadLayer(int layer, int slots) => Packet(CmdRead, (byte)slots, 0, (byte)layer);
 
     public static byte[] Commit() => Packet(CmdCommit, 0xFE, 0xFF);
 

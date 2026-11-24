@@ -1,7 +1,7 @@
 # MacroPad
 
 A cross-platform app (Windows and Linux) for the cheap "MINI_KEYBOARD" macropads sold on AliExpress, for example the
-3-key-plus-knob "Macropad Macro Programming Keyboard RGB". It replaces the vendor's Windows-only `MINI_KEYBOARD.exe`.
+3-key-plus-knob "Macropad Macro Programming Keyboard RGB" or the 12-key two-knob pad (model `12KV2_MOLD`). It replaces the vendor's Windows-only `MINI_KEYBOARD.exe`.
 Built with Avalonia and .NET 10.
 
 MacroPad does two things:
@@ -42,8 +42,10 @@ choose what it does, and press *Write to pad*:
 
 The lights are set per layer (mode and color). Which layer the pad is on is chosen on the pad itself.
 
-Tested with USB ID `514C:8851`. MacroPad also looks for the other IDs the vendor app supports (`1189`/`514C` with
-PIDs `8830`–`8833`, `8840`, `8842`, `8850`), but those have not been tested.
+Tested with USB IDs `514C:8851` (3 keys, 1 knob) and `514C:8850` (12 keys, 2 knobs, over USB). The 12-key pad
+has no delay between macro steps, and MacroPad doesn't yet know how to set its lights. MacroPad also looks for the
+other IDs the vendor app supports (`1189`/`514C` with PIDs `8830`–`8833`, `8840`, `8842`), but those have not been
+tested.
 [docs/protocol.md](docs/protocol.md) describes how the protocol was worked out.
 
 ## 2. MacroPad actions

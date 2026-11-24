@@ -9,12 +9,15 @@ public sealed class MacroPadDevice : IDisposable
 
     public HidDevice Device { get; }
 
+    public PadModel Model { get; }
+
     /// <summary>What the device reports about itself (first bytes of the answer to the info command).</summary>
     public byte[] Info { get; }
 
     MacroPadDevice(HidDevice device, HidStream stream)
     {
         Device = device;
+        Model = PadModel.For(device.VendorID, device.ProductID);
         _stream = stream;
         _stream.ReadTimeout = 500;
         _stream.WriteTimeout = 1000;
@@ -23,6 +26,12 @@ public sealed class MacroPadDevice : IDisposable
     }
 
     public string Name => $"{Device.VendorID:X4}:{Device.ProductID:X4}";
+
+    /// <summary>Keys on the pad, from the info reply (3 on the 3-key knob pad, 12 on the 12-key two-knob pad).</summary>
+    public int Buttons => Info[2] is > 0 and <= Protocol.MaxButtons ? Info[2] : 3;
+
+    /// <summary>Knobs on the pad, from the info reply.</summary>
+    public int Knobs => Info[3] <= Protocol.MaxKnobs ? Info[3] : 1;
 
     /// <summary>Opens a pad's configuration interface (from <see cref="Pads.Connected"/>), or returns null.</summary>
     public static MacroPadDevice? Open(HidDevice device)
@@ -43,11 +52,13 @@ public sealed class MacroPadDevice : IDisposable
     /// <summary>Reads every slot of one layer (1-based) from the device.</summary>
     public Dictionary<int, Binding> ReadLayer(int layer)
     {
-        Send(Protocol.ReadLayer(layer));
+        int slots = Protocol.SlotCount(Knobs);
+        Send(Protocol.ReadLayer(layer, slots));
         var result = new Dictionary<int, Binding>();
-        for (int i = 0; i < Protocol.SlotCount; i++)
+        for (int i = 0; i < slots; i++)
         {
-            var (_, slot, binding) = Protocol.ParseSlot(Receive());
+            var report = Receive();
+            var (_, slot, binding) = Model.Format == PacketFormat.Steps ? StepProtocol.ParseSlot(report) : Protocol.ParseSlot(report);
             result[slot] = binding;
         }
         return result;
@@ -57,12 +68,16 @@ public sealed class MacroPadDevice : IDisposable
     public void WriteBindings(int layer, IEnumerable<KeyValuePair<int, Binding>> bindings)
     {
         foreach (var (slot, binding) in bindings)
-            Send(Protocol.WriteBinding(layer, slot, binding));
+            Send(Model.Format == PacketFormat.Steps
+                ? StepProtocol.WriteBinding(layer, slot, binding)
+                : Protocol.WriteBinding(layer, slot, binding));
         Commit();
     }
 
     public void WriteLed(int layer, LedMode mode, LedColor color)
     {
+        if (!Model.HasLights)
+            throw new NotSupportedException("MacroPad doesn't know how to set this pad's lights.");
         Send(Protocol.WriteLed(layer, mode, color));
         Commit();
     }

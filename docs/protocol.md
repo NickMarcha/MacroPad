@@ -55,6 +55,38 @@ light setting cannot be read back. Light writes are confirmed: layer 1 set to gr
 Key presses can be read in the background: the consumer-control collection (interface 1, report ID 5) can be
 opened on Windows while the OS also acts on it. Volume Up arrived as `05 E9 00` and then `05 00 00` on release.
 
+## The 12-key two-knob pad (`514C:8850`)
+
+A second model, labelled `12KV2_MOLD` (manufacturer Shenzhen Xiaozhi Technology), uses the same interface, info,
+read (`03 FA`) and save (`03 FD FE FF`) commands, but a different slot layout. It matches the `k8850_4x4` model in
+ch57x-keyboard-tool, which uses that format for `514C:8850` only (its `1189:8850` uses the format above).
+
+- Info: `03 FB 0C 02 0B` (12 keys, 2 knobs; the `0B` is not understood).
+- Write slot: `03 FD <slot> <layer> <type> <flag> <n>`, then `n` steps of `00 00 <code>`. Reads answer in the same
+  layout under `FA`. Bytes past `n` steps keep whatever an older binding left there.
+- Keyboard (`1`): one step per key, and one per modifier before it: `F1` LCtrl, `F2` LShift, `F3` LAlt, `F4` LGui,
+  `F5`–`F8` the right-hand ones. Ctrl+Shift+F24 is `03 FD 01 03 01 00 03 00 00 F1 00 00 F2 00 00 73`. At most 18
+  steps; there is no delay.
+- Media (`2`): `n = 2`, the usage's low byte in the first step and its high byte in the second.
+- Mouse (`3`): as ch57x-keyboard-tool writes it (flag `1`, `n = 4`, then modifier `F1`–`F3`, buttons, dx, dy, wheel
+  as steps). Not tried on the pad yet.
+- The flag byte is `01` in factory slots; writing `00` works too. Its meaning isn't known.
+- Lights: unknown. MacroPad sends no light command to this pad.
+
+Slots: knobs use `16+3k` to `18+3k` as on the 3-key pad (left knob `16`–`18`, right knob `19`–`21`). The keys sit
+three across and four down, and their slots count up each column from the bottom:
+
+```
+ 4  8 12
+ 3  7 11
+ 2  6 10
+ 1  5  9
+```
+
+Out of the box, slot *s* types the *s*-th letter (slot 1 `a`), which is how this map was found. A MacroPad action
+code written to a key arrives on interface 1 as report ID 5, as on the 3-key pad. The pad also has Bluetooth, which
+hasn't been tried.
+
 ## Commands not to send
 
 The vendor app has two more commands. MacroPad never sends them, and nothing should without knowing exactly what
@@ -115,4 +147,5 @@ nobody uses (the original check used layer 3 key 1), read it back, and restore i
 - The meaning of the info bytes past the first four.
 - Whether the knob's "turn left" is slot 16 or 18 on every pad (factory defaults are 16 = `3`,
   17 = `2`, 18 = `1`).
-- Pads other than `514C:8851`, and more than one pad at once.
+- Pads other than `514C:8851` and `514C:8850`.
+- The 12-key pad over Bluetooth, its lights, and its mouse bindings.

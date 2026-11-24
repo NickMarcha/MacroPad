@@ -11,13 +11,16 @@ using MacroPad.Core.Updates;
 
 namespace MacroPad.App.ViewModels;
 
-public partial class LayerViewModel(int number, IReadOnlyList<SlotViewModel> buttons, IReadOnlyList<SlotViewModel> knobs) : ViewModelBase
+public partial class LayerViewModel(int number, IReadOnlyList<SlotViewModel> buttons, IReadOnlyList<SlotViewModel> knobs, int keyColumns) : ViewModelBase
 {
+    /// <summary>Keys across, to lay them out as they sit on the pad.</summary>
+    public int KeyColumns { get; } = keyColumns;
     public int Number { get; } = number;
     public string Title => $"Layer {Number}";
     public IReadOnlyList<SlotViewModel> Buttons { get; } = buttons;
     public IReadOnlyList<SlotViewModel> Knobs { get; } = knobs;
     public IEnumerable<SlotViewModel> All => Buttons.Concat(Knobs);
+    public string KnobHeading => Knobs.Count > 3 ? "KNOBS" : "KNOB";
 }
 
 /// <summary>A pad in the header's list.</summary>
@@ -129,6 +132,9 @@ public partial class MainViewModel : ViewModelBase, IDisposable
     [ObservableProperty, NotifyCanExecuteChangedFor(nameof(ReadCommand), nameof(WriteCommand), nameof(ApplyLedCommand))]
     public partial bool IsConnected { get; set; }
 
+    /// <summary>Whether MacroPad can set the open pad's lights (unknown on some models).</summary>
+    [ObservableProperty] public partial bool HasLights { get; set; } = true;
+
     [ObservableProperty, NotifyCanExecuteChangedFor(nameof(ReadCommand), nameof(WriteCommand), nameof(ApplyLedCommand), nameof(ConnectCommand))]
     public partial bool IsBusy { get; set; }
 
@@ -204,13 +210,12 @@ public partial class MainViewModel : ViewModelBase, IDisposable
             DeviceStatus = $"Couldn't open {choice.Label}.";
             return;
         }
-        // The info reply carries the number of buttons and knobs (3 and 1 on the 3-key knob pad).
-        int buttons = _device.Info[2] is > 0 and <= 15 ? _device.Info[2] : 3;
-        int knobs = _device.Info[3] is <= 3 ? _device.Info[3] : 1;
+        var (buttons, knobs) = (_device.Buttons, _device.Knobs);
         var who = HasSeveralPads ? $"{choice.Record.Label} ({_device.Name})" : _device.Name;
         DeviceStatus = $"Connected: {who} — {buttons} keys, {knobs} knob{(knobs == 1 ? "" : "s")}";
         IsConnected = true;
-        BuildLayers(choice.Record.Number, buttons, knobs);
+        HasLights = _device.Model.HasLights;
+        BuildLayers(choice.Record.Number, _device.Model, buttons, knobs);
         await ReadAsync();
     }
 
@@ -235,15 +240,16 @@ public partial class MainViewModel : ViewModelBase, IDisposable
 
     bool CanConnect() => !IsBusy;
 
-    void BuildLayers(int pad, int buttons, int knobs)
+    void BuildLayers(int pad, PadModel model, int buttons, int knobs)
     {
         string[] actions = ["⟲ Turn left", "● Press", "⟳ Turn right"];
         var number = SelectedLayer?.Number ?? 1;
         Layers = Enumerable.Range(1, Protocol.LayerCount).Select(layer => new LayerViewModel(
             layer,
-            Enumerable.Range(0, buttons).Select(b => new SlotViewModel(pad, layer, Protocol.ButtonSlot(b), $"Key {b + 1}")).ToList(),
+            model.KeySlots(buttons).Select((slot, b) => new SlotViewModel(pad, layer, slot, $"Key {b + 1}", model.HasDelay)).ToList(),
             Enumerable.Range(0, knobs).SelectMany(k => Enumerable.Range(0, 3).Select(a =>
-                new SlotViewModel(pad, layer, Protocol.KnobSlot(k, a), knobs == 1 ? actions[a] : $"Knob {k + 1} {actions[a]}"))).ToList()
+                new SlotViewModel(pad, layer, Protocol.KnobSlot(k, a), knobs == 1 ? actions[a] : $"Knob {k + 1} {actions[a]}", model.HasDelay))).ToList(),
+            model.KeyColumns
         )).ToList();
         SelectedLayer = Layers[number - 1];
     }

@@ -39,8 +39,9 @@ public partial class SlotViewModel : ViewModelBase
 
     bool _loading;
 
-    public SlotViewModel(int pad, int layer, int slot, string label)
+    public SlotViewModel(int pad, int layer, int slot, string label, bool hasDelay = true)
     {
+        HasDelay = hasDelay;
         Pad = pad;
         Layer = layer;
         Slot = slot;
@@ -56,6 +57,9 @@ public partial class SlotViewModel : ViewModelBase
     /// <summary>The key code the pad sends for this slot when it is a Home Assistant action.</summary>
     public ushort TriggerCode => Triggers.Code(Layer, Slot, Pad);
     public string Label { get; }
+
+    /// <summary>Whether the pad can wait between a macro's steps.</summary>
+    public bool HasDelay { get; }
 
     [ObservableProperty] public partial bool IsDirty { get; set; }
     [ObservableProperty] public partial bool IsSelected { get; set; }
