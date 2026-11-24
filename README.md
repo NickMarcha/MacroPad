@@ -42,8 +42,9 @@ choose what it does, and press *Write to pad*:
 
 The lights are set per layer (mode and color). Which layer the pad is on is chosen on the pad itself.
 
-Tested with USB IDs `514C:8851` (3 keys, 1 knob) and `514C:8850` (12 keys, 2 knobs, over USB). The 12-key pad
-has no delay between macro steps, and MacroPad doesn't yet know how to set its lights. MacroPad also looks for the
+Tested with USB IDs `514C:8851` (3 keys, 1 knob) and `514C:8850` (12 keys, 2 knobs). The 12-key pad's keys are
+set over USB; its MacroPad actions also work over Bluetooth once it's paired in Windows. MacroPad doesn't set its
+lights yet. MacroPad also looks for the
 other IDs the vendor app supports (`1189`/`514C` with PIDs `8830`–`8833`, `8840`, `8842`), but those have not been
 tested.
 [docs/protocol.md](docs/protocol.md) describes how the protocol was worked out.

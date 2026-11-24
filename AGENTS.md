@@ -42,7 +42,8 @@ dotnet publish src/MacroPad.App -c Release -r win-x64 -o out    # or linux-x64: 
   - `PadModel.cs`: what differs per model (packet format, key layout, lights, delay); `StepProtocol.cs` the
     `514C:8850` format.
   - `Pads.cs`: telling pads apart (USB serial, else device path); `AppSettings.PadFor` numbers them.
-  - `PadListener.cs`: reads every pad's consumer-control reports in the background (report ID 5: a 16-bit usage).
+  - `PadListener.cs`: reads every pad's consumer-control reports in the background (a 16-bit usage; report ID 5 over
+    USB, 3 over Bluetooth, taken from the report descriptor), over USB and Bluetooth.
   - `PadAction.cs`: actions, profiles, and `Triggers` (the codes action keys send, a block of `0x60` per pad).
   - `Target.cs`: targets, levels and `ITargetService`; `HomeAssistant/` and `Bragi/` implement it.
   - `LevelDial.cs`, `KnobAcceleration.cs`: the knob (see below).
@@ -95,7 +96,9 @@ dotnet publish src/MacroPad.App -c Release -r win-x64 -o out    # or linux-x64: 
 ## Testing on real hardware
 
 The owner has a `514C:8851` pad (3 keys, 1 knob), used on Windows 11 and CachyOS (KDE), and a `514C:8850` pad
-(12 keys, 2 knobs; USB and Bluetooth, Bluetooth not tried yet). Home Assistant and
+(12 keys, 2 knobs; USB and Bluetooth, paired with Windows). Over Bluetooth it shows no connection status and the
+owner's PC has a weak signal, so in tests log when the pad connects (its HID collections come and go) and let the owner
+say when they're done rather than running fixed time windows. Home Assistant and
 Bragi run on their tailnet; their addresses and tokens live only in the owner's settings, never here.
 
 - Reading the pad is always safe (`tools/hid/probe.py`, or Read from pad). A test write goes to a slot the owner

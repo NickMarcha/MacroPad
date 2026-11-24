@@ -3,13 +3,12 @@ using HidSharp;
 namespace MacroPad.Core;
 
 /// <summary>
-/// Watches the pad's consumer-control reports (report ID 5: a 16-bit usage, then 0 on release) and raises
-/// <see cref="Pressed"/> for each press. Reading does not take the reports away from the OS. Copes with the pad being
-/// unplugged and plugged in again.
+/// Watches the pads' consumer-control reports (a 16-bit usage, then 0 on release) over USB and Bluetooth, and raises
+/// <see cref="Pressed"/> for each press. Reading does not take the reports away from the OS. Copes with pads being
+/// unplugged, switched off and back on.
 /// </summary>
 public sealed class PadListener : IDisposable
 {
-    const byte ConsumerReportId = 5;
     readonly CancellationTokenSource _stop = new();
     readonly object _gate = new();
     readonly Dictionary<string, HidStream> _open = [];
@@ -27,21 +26,35 @@ public sealed class PadListener : IDisposable
     void Scan()
     {
         if (_stop.IsCancellationRequested) return;
-        foreach (var device in PadIds.Find().Where(d => !PadIds.IsConfigInterface(d)))
+        var devices = PadIds.FindListenable().ToList();
+        lock (_gate)
+        {
+            // A Bluetooth pad that is switched off can leave its read waiting on a dead handle (Windows); closing the
+            // streams of devices that have gone ends those reads, so the pad opens afresh when it comes back.
+            var present = devices.Select(d => d.DevicePath).ToHashSet();
+            foreach (var (path, stream) in _open.Where(o => !present.Contains(o.Key)).ToList())
+            {
+                _open.Remove(path);
+                stream.Dispose();
+            }
+        }
+        foreach (var device in devices)
         {
             lock (_gate)
             {
                 if (_open.ContainsKey(device.DevicePath)) continue;
+                var reportId = PadIds.ConsumerReportId(device);
+                if (reportId is null) continue;
                 // Windows keeps keyboard and mouse collections to itself; those fail to open and are skipped.
                 if (!device.TryOpen(out HidStream stream)) continue;
                 stream.ReadTimeout = Timeout.Infinite;
                 _open[device.DevicePath] = stream;
-                new Thread(() => ReadLoop(device.DevicePath, stream)) { IsBackground = true, Name = "MacroPad listener" }.Start();
+                new Thread(() => ReadLoop(device.DevicePath, stream, reportId.Value)) { IsBackground = true, Name = "MacroPad listener" }.Start();
             }
         }
     }
 
-    void ReadLoop(string path, HidStream stream)
+    void ReadLoop(string path, HidStream stream, byte reportId)
     {
         var buffer = new byte[Math.Max(64, stream.Device.GetMaxInputReportLength())];
         ushort last = 0;
@@ -50,7 +63,7 @@ public sealed class PadListener : IDisposable
             while (!_stop.IsCancellationRequested)
             {
                 int n = stream.Read(buffer, 0, buffer.Length);
-                if (n < 3 || buffer[0] != ConsumerReportId) continue;
+                if (n < 3 || buffer[0] != reportId) continue;
                 var usage = (ushort)(buffer[1] | buffer[2] << 8);
                 if (usage != 0 && usage != last) Pressed?.Invoke(usage);
                 last = usage;
@@ -58,11 +71,13 @@ public sealed class PadListener : IDisposable
         }
         catch (Exception e) when (e is IOException or ObjectDisposedException or TimeoutException)
         {
-            // Unplugged or closed; a later plug-in event opens it again.
+            // Unplugged, switched off or closed; the device-list change when it comes back opens it again.
         }
         finally
         {
-            lock (_gate) _open.Remove(path);
+            // Only this stream's entry: a newer stream may already be open on the same path.
+            lock (_gate)
+                if (_open.TryGetValue(path, out var current) && current == stream) _open.Remove(path);
             stream.Dispose();
         }
     }
@@ -79,14 +94,52 @@ public sealed class PadListener : IDisposable
     }
 }
 
-/// <summary>The USB IDs the vendor's MINI_KEYBOARD.exe looks for. Only 514C:8851 has been tested.</summary>
+/// <summary>The USB IDs the vendor's MINI_KEYBOARD.exe looks for (514C:8851 and 514C:8850 tested), and the pads over Bluetooth.</summary>
 public static class PadIds
 {
+    /// <summary>
+    /// The product name a pad gives over Bluetooth, where it has no configuration interface and borrows Apple's IDs
+    /// (05AC:022C on the 12-key pad). Windows reports no name while a paired pad is switched off, so the IDs count too;
+    /// listening to a real Apple keyboard is harmless, as it never sends MacroPad's codes.
+    /// </summary>
+    public const string BluetoothName = "MINI_KEYBOARD";
+    const int BluetoothVendorId = 0x05AC, BluetoothProductId = 0x022C;
+    const uint ConsumerControl = 0x000C0001;
+
     static readonly int[] VendorIds = [0x514C, 0x1189];
     static readonly int[] ProductIds = [0x8842, 0x8840, 0x8830, 0x8831, 0x8832, 0x8833, 0x8850, 0x8851];
 
     public static IEnumerable<HidDevice> Find() => DeviceList.Local.GetHidDevices()
         .Where(d => VendorIds.Contains(d.VendorID) && ProductIds.Contains(d.ProductID));
+
+    /// <summary>Everything a press can arrive on: the pads' USB key interfaces and pads paired over Bluetooth.</summary>
+    public static IEnumerable<HidDevice> FindListenable() =>
+        Find().Where(d => !IsConfigInterface(d)).Concat(DeviceList.Local.GetHidDevices().Where(IsBluetoothPad));
+
+    static bool IsBluetoothPad(HidDevice d)
+    {
+        if (d.VendorID == BluetoothVendorId && d.ProductID == BluetoothProductId) return true;
+        try { return d.GetProductName() == BluetoothName; }
+        catch { return false; }
+    }
+
+    /// <summary>
+    /// The report ID that carries consumer-control usages on this device (5 over USB, 3 over Bluetooth on the 12-key pad),
+    /// or null when it has none.
+    /// </summary>
+    public static byte? ConsumerReportId(HidDevice d)
+    {
+        try
+        {
+            // The Consumer Control collection; other collections can hold consumer items too (the mouse's horizontal wheel).
+            var consumer = d.GetReportDescriptor().DeviceItems.FirstOrDefault(i => i.Usages.GetAllValues().Contains(ConsumerControl));
+            return consumer?.InputReports.FirstOrDefault()?.ReportID;
+        }
+        catch
+        {
+            return null;
+        }
+    }
 
     /// <summary>The configuration interface takes 65-byte output reports; the others are the keyboard, mouse and media keys.</summary>
     public static bool IsConfigInterface(HidDevice d)

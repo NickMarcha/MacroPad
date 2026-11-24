@@ -64,14 +64,28 @@ ch57x-keyboard-tool, which uses that format for `514C:8850` only (its `1189:8850
 - Info: `03 FB 0C 02 0B` (12 keys, 2 knobs; the `0B` is not understood).
 - Write slot: `03 FD <slot> <layer> <type> <flag> <n>`, then `n` steps of `00 00 <code>`. Reads answer in the same
   layout under `FA`. Bytes past `n` steps keep whatever an older binding left there.
+- Each step is `<delay hi> <delay lo> <code>`: a big-endian delay in milliseconds, which the vendor app sets per step
+  (from its decompiled code; MacroPad writes 0 and hasn't tried delays).
 - Keyboard (`1`): one step per key, and one per modifier before it: `F1` LCtrl, `F2` LShift, `F3` LAlt, `F4` LGui,
   `F5`–`F8` the right-hand ones. Ctrl+Shift+F24 is `03 FD 01 03 01 00 03 00 00 F1 00 00 F2 00 00 73`. At most 18
-  steps; there is no delay.
+  steps.
 - Media (`2`): `n = 2`, the usage's low byte in the first step and its high byte in the second.
 - Mouse (`3`): as ch57x-keyboard-tool writes it (flag `1`, `n = 4`, then modifier `F1`–`F3`, buttons, dx, dy, wheel
   as steps). Not tried on the pad yet.
-- The flag byte is `01` in factory slots; writing `00` works too. Its meaning isn't known.
-- Lights: unknown. MacroPad sends no light command to this pad.
+- The flag byte is `01` in factory slots; writing `00` works too. The vendor app never sets it; its meaning isn't known.
+- The info reply's fifth byte (`0B`) is a protocol version: the 2025-06 vendor app uses this format and the RGB lights
+  below for 10 and up, and the format above for lower values.
+
+Lights, per layer, with a colour for every key:
+
+- Write: `03 FE B0 <layer 0-2> <mode> <R G B × 16>`. The layer is 0-based here. The 16 colours are by key slot (the
+  first is slot 1); the knobs have no LEDs. No save command is needed; the vendor app sends none for lights alone.
+- Read: `03 FA B0 <layer 0-2>` → `03 FA <mode> <R G B × 16>`.
+- Modes, as seen on the pad: `0` off, `1` every key lit in its own colour, `2` a key lights in its colour when pressed,
+  `3` a press lights the key and then spreads along its row and column to the edges, `4` an animated rainbow, `5` a
+  slower colour wave. Modes 4 and 5 ignore the key colours and presses.
+- Factory colours, slots 1–16: `FF0000 FF8030 FFFF30 00FF00 00FFFF 0000FF 800080 8B0000 FFA500 FFFF96 7DFF00 008B8B
+  00008B FF00FF FF6666 FFC864`, mode 0 on every layer.
 
 Slots: knobs use `16+3k` to `18+3k` as on the 3-key pad (left knob `16`–`18`, right knob `19`–`21`). The keys sit
 three across and four down, and their slots count up each column from the bottom:
@@ -84,8 +98,21 @@ three across and four down, and their slots count up each column from the bottom
 ```
 
 Out of the box, slot *s* types the *s*-th letter (slot 1 `a`), which is how this map was found. A MacroPad action
-code written to a key arrives on interface 1 as report ID 5, as on the 3-key pad. The pad also has Bluetooth, which
-hasn't been tried.
+code written to a key arrives on interface 1 as report ID 5, as on the 3-key pad.
+
+### Bluetooth
+
+The pad is a Bluetooth LE HID keyboard named `MINI-KEYBOARD`. Pairing is the usual Windows pairing (wireless switch
+on, then Add device); there is no key combination and the vendor app plays no part. The pad gives no sign of being
+connected. Over Bluetooth:
+
+- It reports Apple's IDs, `05AC:022C`, product `MINI_KEYBOARD`, maker `CXKJ`, and its Bluetooth address as serial.
+- It has keyboard, mouse and consumer-control collections, but no configuration interface: settings are written over
+  USB only. GATT also lists battery (`180F`) and two vendor services (`AE30`, `AE40`), not looked into.
+- Key presses carry the same codes; consumer usages come as report ID **3** (`03 61 0F` for `0x0F61`).
+- Windows keeps the paired device while it is off but removes its HID collections, and adds them again when it
+  reconnects (about two seconds after switching on). A read waiting on the old handle can hang, so MacroPad closes
+  streams whose device has gone whenever the device list changes.
 
 ## Commands not to send
 
@@ -148,4 +175,4 @@ nobody uses (the original check used layer 3 key 1), read it back, and restore i
 - Whether the knob's "turn left" is slot 16 or 18 on every pad (factory defaults are 16 = `3`,
   17 = `2`, 18 = `1`).
 - Pads other than `514C:8851` and `514C:8850`.
-- The 12-key pad over Bluetooth, its lights, and its mouse bindings.
+- The 12-key pad's mouse bindings, step delays, and its Bluetooth vendor services; Bluetooth on Linux.
