@@ -43,6 +43,9 @@ public sealed class AppSettings
     public string? NextProfileShortcut { get; set; }
 
 
+    /// <summary>The window's theme by name (System, Dark, Light, …); unknown names fall back to Dark.</summary>
+    public string Theme { get; set; } = "Dark";
+
     /// <summary>Show a pop-up with the room's brightness after each Home Assistant action.</summary>
     public bool ShowPopups { get; set; } = true;
 

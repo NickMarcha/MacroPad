@@ -3,9 +3,26 @@
              x:Class="MacroPad.App.App"
              xmlns:local="using:MacroPad.App"
              RequestedThemeVariant="Dark">
-             <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
+    <!-- The theme is set from the settings at start (Themes.cs); Dark until then. -->
+
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceInclude Source="/Themes/Tokens.axaml" />
+                <ResourceInclude Source="/Themes/Icons.axaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
 
     <Application.Styles>
-        <FluentTheme />
+        <FluentTheme>
+            <!-- Fluent's own controls take the theme's accent and background (the same values as Tokens.axaml). -->
+            <FluentTheme.Palettes>
+                <ColorPaletteResources x:Key="Dark" Accent="#2A9D8F" RegionColor="#161618" />
+                <ColorPaletteResources x:Key="Light" Accent="#1F7A70" RegionColor="#F4F4F2" />
+            </FluentTheme.Palettes>
+        </FluentTheme>
+        <StyleInclude Source="avares://Avalonia.Controls.ColorPicker/Themes/Fluent/Fluent.xaml" />
+        <StyleInclude Source="/Themes/Controls.axaml" />
     </Application.Styles>
 </Application>

@@ -57,6 +57,22 @@ public static class Converters
             value is true ? parameter : Avalonia.Data.BindingOperations.DoNothing;
     }
 
+    /// <summary>The icon for what a key does (Themes/Icons.axaml); nothing for an empty key.</summary>
+    public static readonly FuncValueConverter<MacroPad.App.ViewModels.BindingKind, Avalonia.Media.Geometry?> KindIcon = new(kind =>
+    {
+        var key = kind switch
+        {
+            MacroPad.App.ViewModels.BindingKind.Keyboard => "Icon.KeyboardOutline",
+            MacroPad.App.ViewModels.BindingKind.Media => "Icon.MusicNote",
+            MacroPad.App.ViewModels.BindingKind.Mouse => "Icon.Mouse",
+            MacroPad.App.ViewModels.BindingKind.Action => "Icon.LightningBolt",
+            _ => null,
+        };
+        return key is not null && Avalonia.Application.Current?.TryGetResource(key, null, out var icon) == true ? icon as Avalonia.Media.Geometry : null;
+    });
+
+    public static readonly FuncValueConverter<Avalonia.Media.Color, Avalonia.Media.IBrush> Brush = new(c => new Avalonia.Media.SolidColorBrush(c));
+
     public static readonly FuncValueConverter<KeyChord, string> Chord = new(c => c is null ? "" : Usages.Format(c));
 
     /// <summary>Enum values as words: Action → "MacroPad action", TurnOn → "Turn on".</summary>

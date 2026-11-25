@@ -113,6 +113,10 @@ connected. Over Bluetooth:
 - Windows keeps the paired device while it is off but removes its HID collections, and adds them again when it
   reconnects (about two seconds after switching on). A read waiting on the old handle can hang, so MacroPad closes
   streams whose device has gone whenever the device list changes.
+- Over Bluetooth the pad gives its Bluetooth address as the serial number (it is also in the device path), and
+  neither its USB serial nor its model. MacroPad links an address to the one known 514C:8850 pad without an address
+  and stores it on that pad (`PadRecord.Bluetooth`). If there are none or several of them, the address gets a pad
+  of its own.
 
 ## Commands not to send
 

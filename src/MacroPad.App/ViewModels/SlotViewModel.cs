@@ -65,6 +65,10 @@ public partial class SlotViewModel : ViewModelBase
     [ObservableProperty] public partial bool IsSelected { get; set; }
     [ObservableProperty] public partial string Summary { get; set; } = "—";
 
+    // The keycap's short label: what it does, and on what.
+    [ObservableProperty] public partial string CapTitle { get; set; } = "";
+    [ObservableProperty] public partial string CapDetail { get; set; } = "";
+
     [ObservableProperty, NotifyPropertyChangedFor(nameof(IsKeyboard), nameof(IsMedia), nameof(IsMouse), nameof(IsAction))]
     public partial BindingKind Kind { get; set; }
 
@@ -203,9 +207,18 @@ public partial class SlotViewModel : ViewModelBase
         Kind = BindingKind.Action;
     }
 
-    string Describe() => Kind == BindingKind.Action
-        ? (PadAction?.Describe() ?? "MacroPad action (choose what it does)") + (IsInherited ? " · from the default profile" : "")
-        : Usages.Format(Binding);
+    string Describe()
+    {
+        (CapTitle, CapDetail) = Kind switch
+        {
+            BindingKind.Action => PadAction?.Short() ?? ("Action", "not set"),
+            BindingKind.None when _unknown is null => ("", ""),
+            _ => (Usages.Format(Binding), ""),
+        };
+        return Kind == BindingKind.Action
+            ? (PadAction?.Describe() ?? "MacroPad action (choose what it does)") + (IsInherited ? " · from the default profile" : "")
+            : Usages.Format(Binding);
+    }
 
     /// <summary>Adds a chord captured from a real key press.</summary>
     public void AddChord(KeyChord chord)
@@ -234,7 +247,7 @@ public partial class SlotViewModel : ViewModelBase
     protected override void OnPropertyChanged(System.ComponentModel.PropertyChangedEventArgs e)
     {
         base.OnPropertyChanged(e);
-        if (e.PropertyName is nameof(IsDirty) or nameof(IsSelected) or nameof(Summary) or nameof(IsKeyboard) or nameof(IsMedia) or nameof(IsMouse) or nameof(IsAction) or nameof(IsStepped) or nameof(NeedsTarget) or nameof(NeedsProfile) or nameof(IsInherited)
+        if (e.PropertyName is nameof(IsDirty) or nameof(IsSelected) or nameof(Summary) or nameof(CapTitle) or nameof(CapDetail) or nameof(IsKeyboard) or nameof(IsMedia) or nameof(IsMouse) or nameof(IsAction) or nameof(IsStepped) or nameof(NeedsTarget) or nameof(NeedsProfile) or nameof(IsInherited)
             or nameof(PickedKey) or nameof(PickCtrl) or nameof(PickShift) or nameof(PickAlt) or nameof(PickWin))
             return;
         if (e.PropertyName == nameof(Kind) && !_loading) _unknown = null;

@@ -1,0 +1,137 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:MacroPad.App.ViewModels"
+             xmlns:local="using:MacroPad.App"
+             xmlns:core="using:MacroPad.Core"
+             x:Class="MacroPad.App.Views.SettingsPage"
+             x:DataType="vm:MainViewModel">
+    <!-- The app's own settings; nothing here belongs to one pad. -->
+    <ScrollViewer>
+        <StackPanel Margin="24,16,24,32" Spacing="28" MaxWidth="640" HorizontalAlignment="Left">
+            <TextBlock Text="Settings" Classes="title" />
+
+            <StackPanel Spacing="10">
+                <TextBlock Text="Connections" Classes="section" />
+                <TextBlock Classes="note" Text="Services MacroPad actions drive. Each adds its lights or audio controls to the targets a key or knob can act on." />
+
+                <Expander Classes="connection">
+                    <Expander.Header>
+                        <Grid ColumnDefinitions="Auto,10,*,Auto">
+                            <PathIcon Data="{StaticResource Icon.HomeAssistant}" />
+                            <TextBlock Grid.Column="2" Text="Home Assistant" FontWeight="SemiBold" VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="3" Text="{Binding HaStatus}" Classes="muted" FontSize="12" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="300" />
+                        </Grid>
+                    </Expander.Header>
+                    <StackPanel Spacing="8">
+                        <TextBox Text="{Binding HaUrl}" PlaceholderText="https://homeassistant.local:8123" />
+                        <TextBox Text="{Binding HaToken}" PasswordChar="•" PlaceholderText="Long-lived access token (kept once saved)" />
+                        <Button Content="Connect" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Command="{Binding ConnectHaCommand}" />
+                        <TextBlock Classes="note"
+                                   Text="Make a token in Home Assistant under your profile, Security, Long-lived access tokens. Areas and lights become targets: Toggle switches them, Up and Down turn the brightness." />
+                    </StackPanel>
+                </Expander>
+
+                <Expander Classes="connection">
+                    <Expander.Header>
+                        <Grid ColumnDefinitions="Auto,10,*,Auto">
+                            <PathIcon Data="{StaticResource Icon.Speaker}" />
+                            <TextBlock Grid.Column="2" Text="Bragi" FontWeight="SemiBold" VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="3" Text="{Binding BragiStatus}" Classes="muted" FontSize="12" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="300" />
+                        </Grid>
+                    </Expander.Header>
+                    <StackPanel Spacing="8">
+                        <TextBox Text="{Binding BragiUrl}" PlaceholderText="https://bragi.example.ts.net" />
+                        <TextBox Text="{Binding BragiKeyInput}" PasswordChar="•" PlaceholderText="API key (kept once saved)" />
+                        <Button Content="Connect" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Command="{Binding ConnectBragiCommand}" />
+                        <TextBlock Classes="note"
+                                   Text="Make a key in Bragi's dashboard: the lock button, Security, API connections. Each headset and peer control becomes a target: Toggle mutes, Up and Down turn the volume." />
+                    </StackPanel>
+                </Expander>
+
+                <Button Classes="link" Content="Want MacroPad to drive something else? Request a connection" Command="{Binding RequestConnectionCommand}" />
+            </StackPanel>
+
+            <StackPanel Spacing="8">
+                <TextBlock Text="Appearance" Classes="section" />
+                <StackPanel Orientation="Horizontal" Spacing="12">
+                    <TextBlock Text="Theme" VerticalAlignment="Center" />
+                    <ComboBox ItemsSource="{x:Static vm:MainViewModel.ThemeChoices}" SelectedItem="{Binding Theme}" MinWidth="160" />
+                </StackPanel>
+            </StackPanel>
+
+            <StackPanel Spacing="8">
+                <TextBlock Text="Pop-ups" Classes="section" />
+                <CheckBox Content="Show pop-ups for lights, audio and profile switches" IsChecked="{Binding ShowPopups}" />
+                <StackPanel Spacing="6" IsEnabled="{Binding ShowPopups}">
+                    <TextBlock Text="Where on the screen" Classes="label" />
+                    <!-- A screen: click where the pop-up should appear -->
+                    <StackPanel HorizontalAlignment="Left">
+                        <Border Width="216" Height="132" Padding="6" BorderThickness="2" CornerRadius="{DynamicResource Radius.Control}"
+                                BorderBrush="{DynamicResource Brush.BorderStrong}" Background="{DynamicResource Brush.Background}">
+                            <UniformGrid Rows="3" Columns="3">
+                                <RadioButton GroupName="popup" Classes="spot" ToolTip.Tip="Top left" IsChecked="{Binding PopupPosition, Converter={x:Static local:Converters.Is}, ConverterParameter={x:Static core:PopupPosition.TopLeft}}" />
+                                <RadioButton GroupName="popup" Classes="spot" ToolTip.Tip="Top" IsChecked="{Binding PopupPosition, Converter={x:Static local:Converters.Is}, ConverterParameter={x:Static core:PopupPosition.Top}}" />
+                                <RadioButton GroupName="popup" Classes="spot" ToolTip.Tip="Top right" IsChecked="{Binding PopupPosition, Converter={x:Static local:Converters.Is}, ConverterParameter={x:Static core:PopupPosition.TopRight}}" />
+                                <RadioButton GroupName="popup" Classes="spot" ToolTip.Tip="Left" IsChecked="{Binding PopupPosition, Converter={x:Static local:Converters.Is}, ConverterParameter={x:Static core:PopupPosition.Left}}" />
+                                <RadioButton GroupName="popup" Classes="spot" ToolTip.Tip="Centre" IsChecked="{Binding PopupPosition, Converter={x:Static local:Converters.Is}, ConverterParameter={x:Static core:PopupPosition.Center}}" />
+                                <RadioButton GroupName="popup" Classes="spot" ToolTip.Tip="Right" IsChecked="{Binding PopupPosition, Converter={x:Static local:Converters.Is}, ConverterParameter={x:Static core:PopupPosition.Right}}" />
+                                <RadioButton GroupName="popup" Classes="spot" ToolTip.Tip="Bottom left" IsChecked="{Binding PopupPosition, Converter={x:Static local:Converters.Is}, ConverterParameter={x:Static core:PopupPosition.BottomLeft}}" />
+                                <RadioButton GroupName="popup" Classes="spot" ToolTip.Tip="Bottom" IsChecked="{Binding PopupPosition, Converter={x:Static local:Converters.Is}, ConverterParameter={x:Static core:PopupPosition.Bottom}}" />
+                                <RadioButton GroupName="popup" Classes="spot" ToolTip.Tip="Bottom right" IsChecked="{Binding PopupPosition, Converter={x:Static local:Converters.Is}, ConverterParameter={x:Static core:PopupPosition.BottomRight}}" />
+                            </UniformGrid>
+                        </Border>
+                        <Border Width="28" Height="12" Background="{DynamicResource Brush.BorderStrong}" />
+                        <Border Width="84" Height="4" CornerRadius="2" Background="{DynamicResource Brush.BorderStrong}" />
+                    </StackPanel>
+                </StackPanel>
+            </StackPanel>
+
+            <StackPanel Spacing="8">
+                <TextBlock Text="Next profile shortcut" Classes="section" />
+                <Grid ColumnDefinitions="*,6,Auto" IsVisible="{Binding IsWindows}">
+                    <Border Classes="recorder" Focusable="True" Padding="10,6" KeyDown="Shortcut_KeyDown" PointerPressed="Recorder_PointerPressed">
+                        <TextBlock Text="{Binding ShortcutText}" />
+                    </Border>
+                    <Button Grid.Column="2" Content="Clear" Command="{Binding ClearShortcutCommand}" />
+                </Grid>
+                <TextBlock Text="{Binding ShortcutStatus}" Classes="note" IsVisible="{Binding IsWindows}" />
+                <TextBlock Classes="note"
+                           Text="Any shortcut tool can also run: macropad --profile next (or a profile's name). On Linux, add that command as a custom shortcut in your desktop's keyboard settings. A pad key can switch too: set it to the MacroPad action Next profile." />
+            </StackPanel>
+
+            <StackPanel Spacing="6">
+                <TextBlock Text="In the background" Classes="section" />
+                <CheckBox Content="Keep running in the tray when closed" IsChecked="{Binding KeepRunningInTray}" />
+                <CheckBox Content="Start at login (in the tray)" IsChecked="{Binding StartAtLogin}" IsEnabled="{Binding CanStartAtLogin}" />
+                <CheckBox Content="{Binding MenuShortcutLabel}" IsChecked="{Binding ShowInMenu}" IsEnabled="{Binding CanShowInMenu}" />
+                <TextBlock Text="{Binding MenuShortcutNote}" Classes="note" />
+                <TextBlock Classes="note" Text="MacroPad actions only work while MacroPad is running. Everything else is stored on the pad." />
+            </StackPanel>
+
+            <StackPanel Spacing="8">
+                <TextBlock Text="About" Classes="section" />
+                <TextBlock>
+                    <Run Text="MacroPad " /><Run Text="{Binding VersionText}" />
+                </TextBlock>
+                <TextBlock Text="{Binding InstallText}" Classes="muted" TextWrapping="Wrap" />
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Button Command="{Binding CheckForUpdatesNowCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <PathIcon Data="{StaticResource Icon.Update}" />
+                            <TextBlock Text="Check for updates" />
+                        </StackPanel>
+                    </Button>
+                    <Button Content="Update now" Classes="accent" Command="{Binding UpdateCommand}" IsVisible="{Binding CanUpdate}" />
+                </StackPanel>
+                <TextBlock Text="{Binding UpdateText}" TextWrapping="Wrap" Foreground="{DynamicResource Brush.Warning}"
+                           IsVisible="{Binding UpdateText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                <TextBlock Classes="note"><Run Text="Settings: " /><Run Text="{Binding SettingsPath}" /></TextBlock>
+                <WrapPanel>
+                    <Button Classes="link" Content="Report a problem" Command="{Binding ReportProblemCommand}" Margin="0,0,16,0" />
+                    <Button Classes="link" Content="Request hardware support" Command="{Binding RequestHardwareCommand}" Margin="0,0,16,0" />
+                    <Button Classes="link" Content="MacroPad on GitHub" Command="{Binding OpenGitHubCommand}" />
+                </WrapPanel>
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

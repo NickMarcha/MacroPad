@@ -75,6 +75,37 @@ public static class StepProtocol
         return p;
     }
 
+    const byte LightSlot = 0xB0;
+    const byte CmdLightWrite = 0xFE;
+
+    /// <summary>One layer's lights (layer 1–3; the packet counts layers from 0): <c>03 FE B0 &lt;layer&gt; &lt;mode&gt;</c> and 16 RGB triples.</summary>
+    public static byte[] WriteLights(int layer, KeyLights lights)
+    {
+        if (lights.Colors.Count != KeyLights.Count) throw new ArgumentException($"Lights need {KeyLights.Count} colours.");
+        var p = new byte[Protocol.ReportLength];
+        (p[0], p[1], p[2], p[3], p[4]) = (Protocol.ReportId, CmdLightWrite, LightSlot, (byte)(layer - 1), (byte)lights.Mode);
+        for (int i = 0; i < KeyLights.Count; i++)
+            (p[5 + 3 * i], p[6 + 3 * i], p[7 + 3 * i]) = (lights.Colors[i].R, lights.Colors[i].G, lights.Colors[i].B);
+        return p;
+    }
+
+    /// <summary>Asks for one layer's lights (layer 1–3); the pad answers <c>03 FA &lt;mode&gt;</c> and 16 RGB triples.</summary>
+    public static byte[] ReadLights(int layer)
+    {
+        var p = new byte[Protocol.ReportLength];
+        (p[0], p[1], p[2], p[3]) = (Protocol.ReportId, CmdRead, LightSlot, (byte)(layer - 1));
+        return p;
+    }
+
+    public static KeyLights ParseLights(ReadOnlySpan<byte> r)
+    {
+        if (r.Length < 3 + 3 * KeyLights.Count || r[0] != Protocol.ReportId || r[1] != CmdRead)
+            throw new FormatException("Not a lights report.");
+        var colors = new Rgb[KeyLights.Count];
+        for (int i = 0; i < colors.Length; i++) colors[i] = new Rgb(r[3 + 3 * i], r[4 + 3 * i], r[5 + 3 * i]);
+        return new KeyLights((KeyLightMode)Math.Min(r[2], (byte)KeyLightMode.Wave), colors);
+    }
+
     /// <summary>Decodes one answer to <see cref="Protocol.ReadLayer"/>. Bytes past the step count are left over from older bindings.</summary>
     public static (int Layer, int Slot, Binding Binding) ParseSlot(ReadOnlySpan<byte> r)
     {

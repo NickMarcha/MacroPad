@@ -70,14 +70,47 @@ public class StepProtocolTests
     }
 
     [Fact]
-    public void Model_lays_out_keys_as_on_the_pad()
+    public void Model_picks_the_format_by_vendor_and_product()
     {
-        var model = PadModel.For(0x514C, 0x8850);
-        Assert.Equal(PacketFormat.Steps, model.Format);
-        // Top row typed d h l, bottom row a e i.
-        Assert.Equal([4, 8, 12, 3, 7, 11, 2, 6, 10, 1, 5, 9], model.KeySlots(12));
-        Assert.Equal([1, 2, 3], PadModel.For(0x514C, 0x8851).KeySlots(3));
+        Assert.Equal(PacketFormat.Steps, PadModel.For(0x514C, 0x8850).Format);
+        Assert.Equal(PacketFormat.Chords, PadModel.For(0x514C, 0x8851).Format);
         Assert.Equal(PacketFormat.Chords, PadModel.For(0x1189, 0x8850).Format);
+    }
+
+    [Fact]
+    public void Layout_is_the_vendors_and_turns()
+    {
+        var layout = PadLayout.For(12, 2);
+        // Keys 1–4 along the top, knobs on the right.
+        Assert.Equal([1, 2, 3, 4], layout.Keys.Where(k => k.Y == 0).OrderBy(k => k.X).Select(k => k.Slot));
+        Assert.All(layout.Knobs, n => Assert.True(n.X > layout.Keys.Max(k => k.X) + 1));
+
+        // Upright, as it sits with the knobs at the top (three turns clockwise = one anticlockwise): the bottom row is
+        // 1 5 9, which is how the pad typed a e i.
+        var upright = layout.Rotated(3);
+        Assert.Equal([1, 5, 9], upright.Keys.Where(k => k.Y == upright.Keys.Max(m => m.Y)).OrderBy(k => k.X).Select(k => k.Slot));
+        Assert.Equal([4, 8, 12], upright.Keys.Where(k => k.Y == upright.Keys.Min(m => m.Y)).OrderBy(k => k.X).Select(k => k.Slot));
+        Assert.All(upright.Knobs, n => Assert.True(n.Y + PadLayout.KnobSize <= upright.Keys.Min(k => k.Y)));
+        Assert.Equal(layout.Height, upright.Width, 6);
+        Assert.Equal(layout.Width, upright.Height, 6);
+
+        Assert.Equal(layout.Keys, layout.Rotated(4).Keys);
+    }
+
+    [Fact]
+    public void Lights_match_the_packets_used_on_hardware()
+    {
+        // Layer 1 (0 in the packet), mode 1, the factory colours: what the light test sent.
+        var p = StepProtocol.WriteLights(1, KeyLights.Factory with { Mode = KeyLightMode.On });
+        Assert.Equal(Convert.FromHexString("03FEB00001" + "FF0000FF8030FFFF30"), p[..14]);
+        Assert.Equal(Convert.FromHexString("FFC864"), p[50..53]);
+        Assert.Equal(Convert.FromHexString("03FAB002"), StepProtocol.ReadLights(3)[..4]);
+
+        // The pad's answer to a read: 03 FA <mode> and the colours.
+        var reply = new byte[64];
+        Convert.FromHexString("03FA00").CopyTo(reply, 0);
+        p[5..53].CopyTo(reply, 3);
+        Assert.Equal(KeyLights.Factory, StepProtocol.ParseLights(reply));
     }
 
     [Fact]

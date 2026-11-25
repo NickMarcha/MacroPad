@@ -116,6 +116,25 @@ public static class PadIds
     public static IEnumerable<HidDevice> FindListenable() =>
         Find().Where(d => !IsConfigInterface(d)).Concat(DeviceList.Local.GetHidDevices().Where(IsBluetoothPad));
 
+    /// <summary>
+    /// The Bluetooth addresses (12 hex digits, lower case) of the pads connected over Bluetooth now. Windows lists a
+    /// paired pad's HID collections only while it is switched on and connected.
+    /// </summary>
+    public static IReadOnlyList<string> BluetoothAddresses() => DeviceList.Local.GetHidDevices().Where(IsBluetoothPad)
+        .Select(BluetoothAddress).OfType<string>().Distinct().ToList();
+
+    static string? BluetoothAddress(HidDevice d)
+    {
+        // The pad gives its address as the serial number; the device path carries it too ("…_a1b2c3d4e5f6&col03…").
+        string? serial = null;
+        try { serial = d.GetSerialNumber(); }
+        catch { }
+        serial = serial?.Replace(":", "").Trim().ToLowerInvariant();
+        if (serial is { Length: 12 } && serial.All(Uri.IsHexDigit)) return serial;
+        var m = System.Text.RegularExpressions.Regex.Match(d.DevicePath, "_([0-9a-fA-F]{12})(?:&|#|$)");
+        return m.Success ? m.Groups[1].Value.ToLowerInvariant() : null;
+    }
+
     static bool IsBluetoothPad(HidDevice d)
     {
         if (d.VendorID == BluetoothVendorId && d.ProductID == BluetoothProductId) return true;

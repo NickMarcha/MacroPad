@@ -1,497 +1,147 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:MacroPad.App.ViewModels"
-        xmlns:local="using:MacroPad.App"
-        xmlns:core="using:MacroPad.Core"
-        xmlns:ha="using:MacroPad.Core.HomeAssistant"
+        xmlns:views="using:MacroPad.App.Views"
         x:Class="MacroPad.App.Views.MainWindow"
         x:DataType="vm:MainViewModel"
         Icon="/Assets/macropad.ico"
-        Width="1040" Height="720" MinWidth="820" MinHeight="560"
+        Width="1240" Height="780" MinWidth="1000" MinHeight="600"
+        Background="{DynamicResource Brush.Background}"
         Title="MacroPad">
 
-    <Window.Styles>
-        <Style Selector="Button.slot">
-            <Setter Property="HorizontalAlignment" Value="Stretch" />
-            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-            <Setter Property="Padding" Value="12,10" />
-            <Setter Property="CornerRadius" Value="10" />
-            <Setter Property="BorderThickness" Value="2" />
-            <Setter Property="BorderBrush" Value="Transparent" />
-        </Style>
-        <Style Selector="Button.slot.selected">
-            <Setter Property="BorderBrush" Value="{DynamicResource SystemAccentColor}" />
-        </Style>
-        <Style Selector="Expander.connection">
-            <Setter Property="HorizontalAlignment" Value="Stretch" />
-            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-        </Style>
-        <Style Selector="Expander.connection /template/ ToggleButton#ExpanderHeader">
-            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-        </Style>
-        <Style Selector="Button.link">
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="Padding" Value="0" />
-            <Setter Property="Foreground" Value="{DynamicResource SystemAccentColorLight2}" />
-            <Setter Property="Cursor" Value="Hand" />
-        </Style>
-        <Style Selector="Button.link:pointerover /template/ ContentPresenter">
-            <Setter Property="Background" Value="Transparent" />
-        </Style>
-        <Style Selector="TabItem">
-            <Setter Property="FontSize" Value="17" />
-            <Setter Property="MinHeight" Value="36" />
-        </Style>
-        <Style Selector="RadioButton.spot">
-            <Setter Property="HorizontalAlignment" Value="Center" />
-            <Setter Property="VerticalAlignment" Value="Center" />
-            <Setter Property="MinWidth" Value="0" />
-            <Setter Property="Padding" Value="0" />
-        </Style>
-        <Style Selector="TextBlock.heading">
-            <Setter Property="FontSize" Value="13" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Opacity" Value="0.7" />
-        </Style>
-        <Style Selector="Border.recorder">
-            <Setter Property="BorderThickness" Value="2" />
-            <Setter Property="BorderBrush" Value="#55FFFFFF" />
-            <Setter Property="CornerRadius" Value="8" />
-            <Setter Property="Padding" Value="14" />
-            <Setter Property="Background" Value="#14FFFFFF" />
-            <Setter Property="Cursor" Value="Hand" />
-        </Style>
-        <Style Selector="Border.recorder:focus">
-            <Setter Property="BorderBrush" Value="{DynamicResource SystemAccentColor}" />
-        </Style>
-    </Window.Styles>
-
-    <Window.Resources>
-        <DataTemplate x:Key="SlotButton" x:DataType="vm:SlotViewModel">
-            <Button Classes="slot" Classes.selected="{Binding IsSelected}"
-                    Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).SelectSlotCommand}"
-                    CommandParameter="{Binding}">
-                <Grid ColumnDefinitions="*,Auto">
-                    <StackPanel Spacing="2">
-                        <TextBlock Text="{Binding Label}" Classes="heading" />
-                        <TextBlock Text="{Binding Summary}" FontSize="15" TextTrimming="CharacterEllipsis" />
-                    </StackPanel>
-                    <Ellipse Grid.Column="1" Width="8" Height="8" Fill="Orange" VerticalAlignment="Top"
-                             IsVisible="{Binding IsDirty}" ToolTip.Tip="Not written to the pad yet" />
-                </Grid>
-            </Button>
-        </DataTemplate>
-    </Window.Resources>
-
     <DockPanel>
-        <!-- Header -->
-        <Border DockPanel.Dock="Top" Padding="16,12" Background="#18FFFFFF">
-            <Grid ColumnDefinitions="*,Auto">
-                <StackPanel>
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <TextBlock Text="MacroPad" FontSize="20" FontWeight="SemiBold" />
-                        <TextBlock Text="{Binding VersionText}" Opacity="0.6" VerticalAlignment="Bottom" Margin="0,0,0,3" />
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <ComboBox ItemsSource="{Binding PadChoices}" SelectedItem="{Binding SelectedPad}" IsVisible="{Binding HasSeveralPads}"
-                                  MinWidth="200" Padding="8,2" ToolTip.Tip="The pad to edit" />
-                        <TextBlock Text="{Binding DeviceStatus}" Opacity="0.8" VerticalAlignment="Center" />
-                    </StackPanel>
-                </StackPanel>
-                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                    <Button Content="Connect" Command="{Binding ConnectCommand}" />
-                    <Button Content="Read from pad" Command="{Binding ReadCommand}" />
-                    <Button Content="Write to pad" Classes="accent" Command="{Binding WriteCommand}" />
-                </StackPanel>
-            </Grid>
-        </Border>
-
         <!-- Status line: what's happening on the left, how the app is installed and updates on the right -->
-        <Border DockPanel.Dock="Bottom" Padding="16,6" Background="#10FFFFFF">
+        <Border DockPanel.Dock="Bottom" Classes="statusbar">
             <Grid ColumnDefinitions="*,Auto">
                 <StackPanel Orientation="Horizontal" Spacing="8">
                     <ProgressBar IsIndeterminate="True" Width="80" IsVisible="{Binding IsBusy}" />
                     <TextBlock Text="{Binding Message}" VerticalAlignment="Center" />
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10">
-                    <TextBlock Text="{Binding InstallText}" Opacity="0.6" VerticalAlignment="Center" />
-                    <TextBlock Text="{Binding UpdateText}" Foreground="Gold" VerticalAlignment="Center"
+                    <TextBlock Text="{Binding InstallText}" Classes="muted" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding UpdateText}" Foreground="{DynamicResource Brush.Warning}" VerticalAlignment="Center"
                                IsVisible="{Binding UpdateText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
                     <Button Content="Update now" Classes="accent" Padding="10,2" Command="{Binding UpdateCommand}" IsVisible="{Binding CanUpdate}" />
                 </StackPanel>
             </Grid>
         </Border>
 
-        <TabControl Margin="8,4,8,0">
-            <TabItem Header="Pad">
-                <DockPanel>
-                  <!-- Left: layers, pad and lights -->
-                  <DockPanel DockPanel.Dock="Left" Width="360">
-                      <ListBox DockPanel.Dock="Top" Margin="16,16,16,0" IsEnabled="{Binding IsConnected}" ItemsSource="{Binding Layers}" SelectedItem="{Binding SelectedLayer}">
-                          <ListBox.ItemsPanel>
-                              <ItemsPanelTemplate>
-                                  <UniformGrid Rows="1" />
-                              </ItemsPanelTemplate>
-                          </ListBox.ItemsPanel>
-                          <ListBox.ItemTemplate>
-                              <DataTemplate x:DataType="vm:LayerViewModel">
-                                  <TextBlock Text="{Binding Title}" HorizontalAlignment="Center" />
-                              </DataTemplate>
-                          </ListBox.ItemTemplate>
-                      </ListBox>
-                      <ScrollViewer>
-                          <StackPanel Margin="16" Spacing="16">
-                              <StackPanel Spacing="8">
-                                  <TextBlock Text="PROFILE" Classes="heading" />
-                                  <Grid ColumnDefinitions="*,6,Auto,6,Auto">
-                                      <ComboBox HorizontalAlignment="Stretch" ItemsSource="{x:Static vm:SlotViewModel.ProfileNames}" SelectedItem="{Binding ActiveProfileName}" />
-                                      <Button Grid.Column="2" Content="New" ToolTip.Tip="New profile" Command="{Binding AddProfileCommand}" />
-                                      <Button Grid.Column="4" Content="Delete" ToolTip.Tip="Delete this profile" Command="{Binding DeleteProfileCommand}" IsEnabled="{Binding !IsEditingDefault}" />
-                                  </Grid>
-                                  <Grid ColumnDefinitions="*,6,Auto">
-                                      <TextBox Text="{Binding ProfileNameDraft}" PlaceholderText="Profile name" />
-                                      <Button Grid.Column="2" Content="Rename" Command="{Binding RenameProfileCommand}" />
-                                  </Grid>
-                                  <StackPanel Orientation="Horizontal" Spacing="6">
-                                      <Button Content="Make default" Command="{Binding MakeDefaultCommand}" IsEnabled="{Binding !IsEditingDefault}"
-                                            ToolTip.Tip="Other profiles fall back to the default for keys they don't set" />
-                                    <Button Content="Import…" Click="ImportProfiles_Click" ToolTip.Tip="Add profiles from a file" />
-                                      <Button Content="Export ▾" ToolTip.Tip="Save profiles to a file">
-                                          <Button.Flyout>
-                                              <MenuFlyout>
-                                                  <MenuItem Header="This profile…" Click="ExportProfile_Click" />
-                                                  <MenuItem Header="All profiles…" Click="ExportAllProfiles_Click" />
-                                              </MenuFlyout>
-                                          </Button.Flyout>
-                                      </Button>
-                                  </StackPanel>
-                                  <TextBlock Text="{Binding DefaultNote}" TextWrapping="Wrap" FontSize="12" Opacity="0.8" />
-                                  <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.6"
-                                             Text="The profile picked here is the active one and the one you edit. Profiles change what action keys do; anything a profile doesn't set comes from the default profile. Keyboard, media and mouse keys are stored on the pad and are the same in every profile." />
-                              </StackPanel>
-
-                              <StackPanel Spacing="16" IsEnabled="{Binding IsConnected}">
-                                  <StackPanel Spacing="8">
-                                      <TextBlock Text="KEYS" Classes="heading" />
-                                      <ItemsControl ItemsSource="{Binding SelectedLayer.Buttons}" ItemTemplate="{StaticResource SlotButton}">
-                                          <ItemsControl.ItemsPanel>
-                                              <ItemsPanelTemplate>
-                                                  <UniformGrid Columns="{Binding SelectedLayer.KeyColumns}" ColumnSpacing="6" RowSpacing="6" />
-                                              </ItemsPanelTemplate>
-                                          </ItemsControl.ItemsPanel>
-                                      </ItemsControl>
-                                  </StackPanel>
-
-                                  <StackPanel Spacing="8">
-                                      <TextBlock Text="{Binding SelectedLayer.KnobHeading}" Classes="heading" />
-                                      <ItemsControl ItemsSource="{Binding SelectedLayer.Knobs}" ItemTemplate="{StaticResource SlotButton}">
-                                          <ItemsControl.ItemsPanel>
-                                              <ItemsPanelTemplate>
-                                                  <StackPanel Spacing="6" />
-                                              </ItemsPanelTemplate>
-                                          </ItemsControl.ItemsPanel>
-                                      </ItemsControl>
-                                  </StackPanel>
-
-                                  <StackPanel Spacing="8" IsVisible="{Binding HasLights}">
-                                      <TextBlock Text="LIGHTS (THIS LAYER)" Classes="heading" />
-                                      <Grid ColumnDefinitions="*,8,*">
-                                          <ComboBox HorizontalAlignment="Stretch" ItemsSource="{x:Static vm:MainViewModel.LedModes}" SelectedItem="{Binding LedMode}">
-                                              <ComboBox.ItemTemplate>
-                                                  <DataTemplate>
-                                                      <TextBlock Text="{Binding Converter={x:Static local:Converters.Words}}" />
-                                                  </DataTemplate>
-                                              </ComboBox.ItemTemplate>
-                                          </ComboBox>
-                                          <ComboBox Grid.Column="2" HorizontalAlignment="Stretch" ItemsSource="{x:Static vm:MainViewModel.LedColors}" SelectedItem="{Binding LedColor}">
-                                              <ComboBox.ItemTemplate>
-                                                  <DataTemplate>
-                                                      <TextBlock Text="{Binding Converter={x:Static local:Converters.Words}}" />
-                                                  </DataTemplate>
-                                              </ComboBox.ItemTemplate>
-                                          </ComboBox>
-                                      </Grid>
-                                      <Button Content="Apply lights" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Command="{Binding ApplyLedCommand}" />
-                                      <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.6"
-                                                 Text="Lights are written straight away. The pad can't report its current light setting, so this doesn't show what's on it now." />
-                                  </StackPanel>
-                              </StackPanel>
-                          </StackPanel>
-                      </ScrollViewer>
-                  </DockPanel>
-
-                  <!-- Right: editor for the selected slot -->
-                  <ScrollViewer>
-                      <ContentControl Margin="24,16" Content="{Binding SelectedSlot}" IsEnabled="{Binding IsConnected}">
-                          <ContentControl.ContentTemplate>
-                              <DataTemplate x:DataType="vm:SlotViewModel">
-                                  <StackPanel Spacing="16" MaxWidth="560" HorizontalAlignment="Left">
-                                      <StackPanel>
-                                          <TextBlock Text="{Binding Label}" FontSize="24" FontWeight="SemiBold" />
-                                          <TextBlock Text="{Binding Summary}" Opacity="0.7" TextWrapping="Wrap" />
-                                      </StackPanel>
-
-                                      <StackPanel Spacing="6">
-                                          <TextBlock Text="ACTION" Classes="heading" />
-                                          <ComboBox ItemsSource="{x:Static vm:SlotViewModel.Kinds}" SelectedItem="{Binding Kind}" MinWidth="200">
-                                              <ComboBox.ItemTemplate>
-                                                  <DataTemplate>
-                                                      <TextBlock Text="{Binding Converter={x:Static local:Converters.Words}}" />
-                                                  </DataTemplate>
-                                              </ComboBox.ItemTemplate>
-                                          </ComboBox>
-                                      </StackPanel>
-
-                                      <!-- Keyboard -->
-                                      <StackPanel Spacing="12" IsVisible="{Binding IsKeyboard}">
-                                          <StackPanel Spacing="6">
-                                              <TextBlock Text="RECORD" Classes="heading" />
-                                              <Border Classes="recorder" Focusable="True" KeyDown="Recorder_KeyDown" PointerPressed="Recorder_PointerPressed">
-                                                  <TextBlock TextWrapping="Wrap"
-                                                             Text="Click here, then press a key or combination (e.g. Ctrl+Shift+S). Each press adds a step." />
-                                              </Border>
-                                          </StackPanel>
-
-                                          <StackPanel Spacing="6">
-                                              <TextBlock Text="STEPS" Classes="heading" />
-                                              <ItemsControl ItemsSource="{Binding Chords}">
-                                                  <ItemsControl.ItemsPanel>
-                                                      <ItemsPanelTemplate>
-                                                          <WrapPanel />
-                                                      </ItemsPanelTemplate>
-                                                  </ItemsControl.ItemsPanel>
-                                                  <ItemsControl.ItemTemplate>
-                                                      <DataTemplate x:DataType="core:KeyChord">
-                                                          <Border Background="#28FFFFFF" CornerRadius="6" Padding="10,4,4,4" Margin="0,0,6,6">
-                                                              <StackPanel Orientation="Horizontal" Spacing="6">
-                                                                  <TextBlock Text="{Binding Converter={x:Static local:Converters.Chord}}" VerticalAlignment="Center" />
-                                                                  <Button Content="✕" Padding="6,0" Background="Transparent"
-                                                                          Command="{Binding $parent[ItemsControl].((vm:SlotViewModel)DataContext).RemoveChordCommand}"
-                                                                          CommandParameter="{Binding}" />
-                                                              </StackPanel>
-                                                          </Border>
-                                                      </DataTemplate>
-                                                  </ItemsControl.ItemTemplate>
-                                              </ItemsControl>
-                                              <Button Content="Clear steps" Command="{Binding ClearChordsCommand}" />
-                                          </StackPanel>
-
-                                          <StackPanel Spacing="6">
-                                              <TextBlock Text="ADD A KEY BY NAME (F13–F24, keys your OS grabs)" Classes="heading" />
-                                              <WrapPanel>
-                                                  <CheckBox Content="Ctrl" IsChecked="{Binding PickCtrl}" Margin="0,0,8,0" />
-                                                  <CheckBox Content="Shift" IsChecked="{Binding PickShift}" Margin="0,0,8,0" />
-                                                  <CheckBox Content="Alt" IsChecked="{Binding PickAlt}" Margin="0,0,8,0" />
-                                                  <CheckBox Content="Win/Super" IsChecked="{Binding PickWin}" Margin="0,0,8,0" />
-                                              </WrapPanel>
-                                              <StackPanel Orientation="Horizontal" Spacing="8">
-                                                  <ComboBox ItemsSource="{x:Static vm:SlotViewModel.KeyChoices}" SelectedItem="{Binding PickedKey}"
-                                                            MinWidth="160" MaxDropDownHeight="320" PlaceholderText="Key" />
-                                                  <Button Content="Add step" Command="{Binding AddPickedKeyCommand}" />
-                                              </StackPanel>
-                                          </StackPanel>
-
-                                          <StackPanel Spacing="6" IsVisible="{Binding HasDelay}">
-                                              <TextBlock Text="DELAY BETWEEN STEPS (MS)" Classes="heading" />
-                                              <NumericUpDown Value="{Binding DelayMs}" Minimum="0" Maximum="6000" Increment="10" FormatString="0" Width="160" HorizontalAlignment="Left" />
-                                          </StackPanel>
-                                      </StackPanel>
-
-                                      <!-- Media -->
-                                      <StackPanel Spacing="6" IsVisible="{Binding IsMedia}">
-                                          <TextBlock Text="MEDIA KEY" Classes="heading" />
-                                          <ComboBox ItemsSource="{x:Static vm:SlotViewModel.MediaChoices}" SelectedItem="{Binding Media}" MinWidth="220" PlaceholderText="Choose…" />
-                                      </StackPanel>
-
-                                      <!-- Mouse -->
-                                      <StackPanel Spacing="12" IsVisible="{Binding IsMouse}">
-                                          <StackPanel Spacing="6">
-                                              <TextBlock Text="BUTTONS" Classes="heading" />
-                                              <WrapPanel>
-                                                  <CheckBox Content="Left" IsChecked="{Binding MouseLeft}" Margin="0,0,8,0" />
-                                                  <CheckBox Content="Right" IsChecked="{Binding MouseRight}" Margin="0,0,8,0" />
-                                                  <CheckBox Content="Middle" IsChecked="{Binding MouseMiddle}" Margin="0,0,8,0" />
-                                              </WrapPanel>
-                                          </StackPanel>
-                                          <StackPanel Spacing="6">
-                                              <TextBlock Text="HOLD" Classes="heading" />
-                                              <WrapPanel>
-                                                  <CheckBox Content="Ctrl" IsChecked="{Binding MouseCtrl}" Margin="0,0,8,0" />
-                                                  <CheckBox Content="Shift" IsChecked="{Binding MouseShift}" Margin="0,0,8,0" />
-                                                  <CheckBox Content="Alt" IsChecked="{Binding MouseAlt}" Margin="0,0,8,0" />
-                                                  <CheckBox Content="Win/Super" IsChecked="{Binding MouseWin}" Margin="0,0,8,0" />
-                                              </WrapPanel>
-                                          </StackPanel>
-                                          <Grid ColumnDefinitions="Auto,12,Auto,12,Auto" RowDefinitions="Auto,Auto">
-                                              <TextBlock Text="WHEEL (+ UP)" Classes="heading" />
-                                              <TextBlock Grid.Column="2" Text="MOVE X" Classes="heading" />
-                                              <TextBlock Grid.Column="4" Text="MOVE Y" Classes="heading" />
-                                              <NumericUpDown Grid.Row="1" Value="{Binding Wheel}" Minimum="-127" Maximum="127" FormatString="0" Width="130" />
-                                              <NumericUpDown Grid.Row="1" Grid.Column="2" Value="{Binding MoveX}" Minimum="-127" Maximum="127" FormatString="0" Width="130" />
-                                              <NumericUpDown Grid.Row="1" Grid.Column="4" Value="{Binding MoveY}" Minimum="-127" Maximum="127" FormatString="0" Width="130" />
-                                          </Grid>
-                                      </StackPanel>
-
-                                      <!-- MacroPad action: Home Assistant or a profile switch -->
-                                      <StackPanel Spacing="12" IsVisible="{Binding IsAction}">
-                                          <Border Background="#2028A0FF" CornerRadius="6" Padding="10,8" IsVisible="{Binding IsInherited}">
-                                              <TextBlock TextWrapping="Wrap" FontSize="12"
-                                                         Text="This profile uses the default profile's action here. Change it to give this profile its own." />
-                                          </Border>
-                                          <Button Content="Use the default profile's action"
-                                                  IsVisible="{Binding !IsInherited}"
-                                                  IsEnabled="{Binding !$parent[Window].((vm:MainViewModel)DataContext).IsEditingDefault}"
-                                                  Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).UseDefaultActionCommand}" />
-                                          <StackPanel Spacing="6">
-                                              <TextBlock Text="DO" Classes="heading" />
-                                              <ComboBox ItemsSource="{x:Static vm:SlotViewModel.PadCommands}" SelectedItem="{Binding PadCommand}" MinWidth="200">
-                                                  <ComboBox.ItemTemplate>
-                                                      <DataTemplate>
-                                                          <TextBlock Text="{Binding Converter={x:Static local:Converters.Words}}" />
-                                                      </DataTemplate>
-                                                  </ComboBox.ItemTemplate>
-                                              </ComboBox>
-                                          </StackPanel>
-                                          <StackPanel Spacing="6" IsVisible="{Binding NeedsProfile}">
-                                              <TextBlock Text="PROFILE" Classes="heading" />
-                                              <ComboBox ItemsSource="{x:Static vm:SlotViewModel.ProfileNames}" SelectedItem="{Binding ProfileChoice}" MinWidth="200" />
-                                          </StackPanel>
-                                          <StackPanel Spacing="6" IsVisible="{Binding NeedsTarget}">
-                                              <TextBlock Text="ON" Classes="heading" />
-                                              <ComboBox ItemsSource="{x:Static vm:SlotViewModel.Targets}" SelectedItem="{Binding Target}" MinWidth="260"
-                                                        MaxDropDownHeight="360" PlaceholderText="Connect Home Assistant or Bragi first (Settings), then pick a target" />
-                                          </StackPanel>
-                                          <StackPanel Spacing="6" IsVisible="{Binding IsStepped}">
-                                              <TextBlock Text="STEP PER CLICK (1/255 OF FULL; GROWS UP TO 8× WHEN TURNED FAST)" Classes="heading" />
-                                              <NumericUpDown Value="{Binding HaStep}" Minimum="1" Maximum="255" Increment="1" FormatString="0" Width="130" HorizontalAlignment="Left" />
-                                          </StackPanel>
-                                          <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.6"
-                                                     Text="The pad sends a code your computer ignores, and MacroPad does the action, using the active profile. Select makes a room or an audio control the one the knob controls (pick 'Selected target' as the knob's target). Toggle on an area works like a wall switch: if any light is on, all go off; on audio it mutes. Turning the knob fast takes bigger steps, like mouse acceleration." />
-                                      </StackPanel>
-
-                                      <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.6"
-                                                 Text="Changes are marked with an orange dot until you press Write to pad. Settings live on the pad itself, so they work on any computer without this app." />
-                                  </StackPanel>
-                              </DataTemplate>
-                          </ContentControl.ContentTemplate>
-                      </ContentControl>
-                  </ScrollViewer>
-                </DockPanel>
-            </TabItem>
-            <TabItem Header="Settings">
-                <ScrollViewer>
-                    <StackPanel Margin="16,16,24,24" Spacing="24" MaxWidth="640" HorizontalAlignment="Left">
-                        <StackPanel Spacing="8">
-                            <TextBlock Text="CONNECTIONS" Classes="heading" />
-                            <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.6"
-                                       Text="Services MacroPad actions drive. Each one adds its lights or audio controls to the targets a key or the knob can act on." />
-
-                            <Expander Classes="connection">
-                                <Expander.Header>
-                                    <Grid ColumnDefinitions="*,Auto">
-                                        <TextBlock Text="Home Assistant · lights" FontWeight="SemiBold" VerticalAlignment="Center" />
-                                        <TextBlock Grid.Column="1" Text="{Binding HaStatus}" FontSize="12" Opacity="0.7" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="300" />
-                                    </Grid>
-                                </Expander.Header>
-                                <StackPanel Spacing="8">
-                                    <TextBox Text="{Binding HaUrl}" PlaceholderText="https://homeassistant.local:8123" />
-                                    <TextBox Text="{Binding HaToken}" PasswordChar="•" PlaceholderText="Long-lived access token (kept once saved)" />
-                                    <Button Content="Connect" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Command="{Binding ConnectHaCommand}" />
-                                    <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.6"
-                                               Text="Make a token in Home Assistant under your profile, Security, Long-lived access tokens. Areas and lights become targets: Toggle switches them, Up and Down turn the brightness." />
-                                </StackPanel>
-                            </Expander>
-
-                            <Expander Classes="connection">
-                                <Expander.Header>
-                                    <Grid ColumnDefinitions="*,Auto">
-                                        <TextBlock Text="Bragi · audio" FontWeight="SemiBold" VerticalAlignment="Center" />
-                                        <TextBlock Grid.Column="1" Text="{Binding BragiStatus}" FontSize="12" Opacity="0.7" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="300" />
-                                    </Grid>
-                                </Expander.Header>
-                                <StackPanel Spacing="8">
-                                    <TextBox Text="{Binding BragiUrl}" PlaceholderText="https://bragi.example.ts.net" />
-                                    <TextBox Text="{Binding BragiKeyInput}" PasswordChar="•" PlaceholderText="API key (kept once saved)" />
-                                    <Button Content="Connect" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Command="{Binding ConnectBragiCommand}" />
-                                    <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.6"
-                                               Text="Make a key in Bragi's dashboard: the lock button, Security, API connections. Each headset and peer control becomes a target: Toggle mutes, Up and Down turn the volume." />
-                                </StackPanel>
-                            </Expander>
-
-                            <Button Classes="link" Content="Want MacroPad to drive something else? Request a connection" Command="{Binding RequestConnectionCommand}" />
-                        </StackPanel>
-
-                        <StackPanel Spacing="4">
-                            <TextBlock Text="IN THE BACKGROUND" Classes="heading" />
-                            <CheckBox Content="Keep running in the tray when closed" IsChecked="{Binding KeepRunningInTray}" />
-                            <CheckBox Content="Start at login (in the tray)" IsChecked="{Binding StartAtLogin}" IsEnabled="{Binding CanStartAtLogin}" />
-                            <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.6"
-                                       Text="Actions (Home Assistant, profiles) only work while MacroPad is running. Everything else is stored on the pad." />
-                        </StackPanel>
-
-                        <StackPanel Spacing="6">
-                            <TextBlock Text="NEXT PROFILE SHORTCUT" Classes="heading" />
-                            <Grid ColumnDefinitions="*,6,Auto" IsVisible="{Binding IsWindows}">
-                                <Border Classes="recorder" Focusable="True" Padding="10,6" KeyDown="Shortcut_KeyDown" PointerPressed="Recorder_PointerPressed">
-                                    <TextBlock Text="{Binding ShortcutText}" />
-                                </Border>
-                                <Button Grid.Column="2" Content="Clear" Command="{Binding ClearShortcutCommand}" />
-                            </Grid>
-                            <TextBlock Text="{Binding ShortcutStatus}" TextWrapping="Wrap" FontSize="12" Opacity="0.8" IsVisible="{Binding IsWindows}" />
-                            <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.6"
-                                       Text="Any shortcut tool can also run: macropad --profile next (or a profile's name). On Linux, add that command as a custom shortcut in your desktop's keyboard settings. A pad key can switch too: set it to the MacroPad action Next profile." />
-                        </StackPanel>
-
-                        <StackPanel Spacing="6">
-                            <TextBlock Text="POP-UPS" Classes="heading" />
-                            <CheckBox Content="Show pop-ups for lights and profile switches" IsChecked="{Binding ShowPopups}" />
-                            <StackPanel Orientation="Horizontal" Spacing="12" IsEnabled="{Binding ShowPopups}">
-                                <TextBlock Text="Where" VerticalAlignment="Center" Opacity="0.8" />
-                                <Border BorderBrush="#40FFFFFF" BorderThickness="1" CornerRadius="6" Padding="4" Width="120" Height="80">
-                                    <UniformGrid Rows="3" Columns="3">
-                                        <RadioButton GroupName="popup" Classes="spot" ToolTip.Tip="Top left" IsChecked="{Binding PopupPosition, Converter={x:Static local:Converters.Is}, ConverterParameter={x:Static core:PopupPosition.TopLeft}}" />
-                                        <RadioButton GroupName="popup" Classes="spot" ToolTip.Tip="Top" IsChecked="{Binding PopupPosition, Converter={x:Static local:Converters.Is}, ConverterParameter={x:Static core:PopupPosition.Top}}" />
-                                        <RadioButton GroupName="popup" Classes="spot" ToolTip.Tip="Top right" IsChecked="{Binding PopupPosition, Converter={x:Static local:Converters.Is}, ConverterParameter={x:Static core:PopupPosition.TopRight}}" />
-                                        <RadioButton GroupName="popup" Classes="spot" ToolTip.Tip="Left" IsChecked="{Binding PopupPosition, Converter={x:Static local:Converters.Is}, ConverterParameter={x:Static core:PopupPosition.Left}}" />
-                                        <RadioButton GroupName="popup" Classes="spot" ToolTip.Tip="Centre" IsChecked="{Binding PopupPosition, Converter={x:Static local:Converters.Is}, ConverterParameter={x:Static core:PopupPosition.Center}}" />
-                                        <RadioButton GroupName="popup" Classes="spot" ToolTip.Tip="Right" IsChecked="{Binding PopupPosition, Converter={x:Static local:Converters.Is}, ConverterParameter={x:Static core:PopupPosition.Right}}" />
-                                        <RadioButton GroupName="popup" Classes="spot" ToolTip.Tip="Bottom left" IsChecked="{Binding PopupPosition, Converter={x:Static local:Converters.Is}, ConverterParameter={x:Static core:PopupPosition.BottomLeft}}" />
-                                        <RadioButton GroupName="popup" Classes="spot" ToolTip.Tip="Bottom" IsChecked="{Binding PopupPosition, Converter={x:Static local:Converters.Is}, ConverterParameter={x:Static core:PopupPosition.Bottom}}" />
-                                        <RadioButton GroupName="popup" Classes="spot" ToolTip.Tip="Bottom right" IsChecked="{Binding PopupPosition, Converter={x:Static local:Converters.Is}, ConverterParameter={x:Static core:PopupPosition.BottomRight}}" />
-                                    </UniformGrid>
-                                </Border>
-                            </StackPanel>
-                        </StackPanel>
-
-                        <StackPanel Spacing="6">
-                            <TextBlock Text="START MENU" Classes="heading" />
-                            <CheckBox Content="{Binding MenuShortcutLabel}" IsChecked="{Binding ShowInMenu}" IsEnabled="{Binding CanShowInMenu}" />
-                            <TextBlock Text="{Binding MenuShortcutNote}" TextWrapping="Wrap" FontSize="12" Opacity="0.6" />
-                        </StackPanel>
-
-                        <StackPanel Spacing="6">
-                            <TextBlock Text="ABOUT" Classes="heading" />
-                            <TextBlock>
-                                <Run Text="MacroPad " /><Run Text="{Binding VersionText}" />
-                            </TextBlock>
-                            <TextBlock Text="{Binding InstallText}" TextWrapping="Wrap" Opacity="0.8" />
-                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                <Button Content="Check for updates" Command="{Binding CheckForUpdatesNowCommand}" />
-                                <Button Content="Update now" Classes="accent" Command="{Binding UpdateCommand}" IsVisible="{Binding CanUpdate}" />
-                            </StackPanel>
-                            <TextBlock Text="{Binding UpdateText}" TextWrapping="Wrap" Foreground="Gold"
-                                       IsVisible="{Binding UpdateText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-                            <TextBlock FontSize="12" Opacity="0.6" TextWrapping="Wrap"><Run Text="Settings: " /><Run Text="{Binding SettingsPath}" /></TextBlock>
-                            <WrapPanel>
-                                <Button Classes="link" Content="Report a problem" Command="{Binding ReportProblemCommand}" Margin="0,0,16,0" />
-                                <Button Classes="link" Content="Request hardware support" Command="{Binding RequestHardwareCommand}" Margin="0,0,16,0" />
-                                <Button Classes="link" Content="MacroPad on GitHub" Command="{Binding OpenGitHubCommand}" />
-                            </WrapPanel>
-                        </StackPanel>
+        <!-- Sidebar: the active profile (it covers every pad), the pads, and the app's settings -->
+        <Border DockPanel.Dock="Left" Width="{DynamicResource Size.Sidebar}" Classes="sidebar">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Top" Margin="16,16,16,12" Spacing="16">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <TextBlock Text="MacroPad" Classes="title" />
+                        <TextBlock Text="{Binding VersionText}" Classes="muted" VerticalAlignment="Bottom" Margin="0,0,0,3" />
                     </StackPanel>
-                </ScrollViewer>
-            </TabItem>
-        </TabControl>
+
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="Profile" Classes="label" />
+                        <Grid ColumnDefinitions="*,4,Auto">
+                            <ComboBox HorizontalAlignment="Stretch" ItemsSource="{x:Static vm:SlotViewModel.ProfileNames}" SelectedItem="{Binding ActiveProfileName}"
+                                      ToolTip.Tip="The active profile, and the one you edit" />
+                            <Button Grid.Column="2" Classes="icon" ToolTip.Tip="Manage profiles" AutomationProperties.Name="Manage profiles">
+                                <PathIcon Data="{StaticResource Icon.PencilOutline}" />
+                                <Button.Flyout>
+                                    <Flyout Placement="RightEdgeAlignedTop">
+                                        <StackPanel Width="300" Spacing="10">
+                                            <TextBlock Text="Profiles" Classes="label" />
+                                            <Grid ColumnDefinitions="*,6,Auto">
+                                                <TextBox Text="{Binding ProfileNameDraft}" PlaceholderText="Profile name" />
+                                                <Button Grid.Column="2" Content="Rename" Command="{Binding RenameProfileCommand}" />
+                                            </Grid>
+                                            <WrapPanel>
+                                                <Button Command="{Binding AddProfileCommand}" Margin="0,0,6,6">
+                                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                                        <PathIcon Data="{StaticResource Icon.Plus}" />
+                                                        <TextBlock Text="New" />
+                                                    </StackPanel>
+                                                </Button>
+                                                <Button Command="{Binding MakeDefaultCommand}" IsEnabled="{Binding !IsEditingDefault}" Margin="0,0,6,6"
+                                                        ToolTip.Tip="Other profiles fall back to the default for keys they don't set">
+                                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                                        <PathIcon Data="{StaticResource Icon.Check}" />
+                                                        <TextBlock Text="Make default" />
+                                                    </StackPanel>
+                                                </Button>
+                                                <Button Command="{Binding DeleteProfileCommand}" IsEnabled="{Binding !IsEditingDefault}" Margin="0,0,6,6">
+                                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                                        <PathIcon Data="{StaticResource Icon.TrashCanOutline}" />
+                                                        <TextBlock Text="Delete" />
+                                                    </StackPanel>
+                                                </Button>
+                                                <Button Click="ImportProfiles_Click" ToolTip.Tip="Add profiles from a file" Margin="0,0,6,6">
+                                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                                        <PathIcon Data="{StaticResource Icon.Import}" />
+                                                        <TextBlock Text="Import…" />
+                                                    </StackPanel>
+                                                </Button>
+                                                <Button ToolTip.Tip="Save profiles to a file" Margin="0,0,6,6">
+                                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                                        <PathIcon Data="{StaticResource Icon.Export}" />
+                                                        <TextBlock Text="Export" />
+                                                    </StackPanel>
+                                                    <Button.Flyout>
+                                                        <MenuFlyout>
+                                                            <MenuItem Header="This profile…" Click="ExportProfile_Click" />
+                                                            <MenuItem Header="All profiles…" Click="ExportAllProfiles_Click" />
+                                                        </MenuFlyout>
+                                                    </Button.Flyout>
+                                                </Button>
+                                            </WrapPanel>
+                                            <TextBlock Text="{Binding DefaultNote}" Classes="note" />
+                                            <TextBlock Classes="note"
+                                                       Text="Profiles change what MacroPad action keys do, on every pad; whatever a profile doesn't set comes from the default profile. Keyboard, media and mouse keys are stored on the pad and are the same in every profile." />
+                                        </StackPanel>
+                                    </Flyout>
+                                </Button.Flyout>
+                            </Button>
+                        </Grid>
+                    </StackPanel>
+                </StackPanel>
+
+                <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,1,0,0" Padding="8">
+                    <Button Classes="nav" Classes.selected="{Binding IsSettingsOpen}" Command="{Binding OpenSettingsCommand}" AutomationProperties.Name="Settings">
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <PathIcon Data="{StaticResource Icon.CogOutline}" />
+                            <TextBlock Text="Settings" />
+                        </StackPanel>
+                    </Button>
+                </Border>
+
+                <DockPanel>
+                    <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="16,4,10,4">
+                        <TextBlock Text="Pads" Classes="label" VerticalAlignment="Center" />
+                        <Button Grid.Column="1" Classes="icon" Command="{Binding ConnectCommand}" ToolTip.Tip="Look for pads again" AutomationProperties.Name="Look for pads again">
+                            <PathIcon Data="{StaticResource Icon.Refresh}" />
+                        </Button>
+                    </Grid>
+                    <ListBox Classes="nav" ItemsSource="{Binding PadChoices}" SelectedItem="{Binding SelectedPad}">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:PadChoice">
+                                <Grid ColumnDefinitions="Auto,10,*">
+                                    <PathIcon Data="{StaticResource Icon.Dialpad}" VerticalAlignment="Center" />
+                                    <StackPanel Grid.Column="2">
+                                        <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis" />
+                                        <StackPanel Orientation="Horizontal" Spacing="4">
+                                            <PathIcon Data="{StaticResource Icon.Usb}" Width="12" Height="12" Foreground="{DynamicResource Brush.TextMuted}"
+                                                      IsVisible="{Binding IsConnected}" />
+                                            <PathIcon Data="{StaticResource Icon.Bluetooth}" Width="12" Height="12" Foreground="{DynamicResource Brush.TextMuted}"
+                                                      IsVisible="{Binding OnBluetooth}" />
+                                            <TextBlock Text="{Binding Detail}" Classes="muted" FontSize="12" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </DockPanel>
+            </DockPanel>
+        </Border>
+
+        <Panel>
+            <views:PadPage IsVisible="{Binding !IsSettingsOpen}" />
+            <views:SettingsPage IsVisible="{Binding IsSettingsOpen}" />
+        </Panel>
     </DockPanel>
 </Window>

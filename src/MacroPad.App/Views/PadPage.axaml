@@ -1,0 +1,235 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:MacroPad.App.ViewModels"
+             xmlns:views="using:MacroPad.App.Views"
+             xmlns:local="using:MacroPad.App"
+             x:Class="MacroPad.App.Views.PadPage"
+             x:DataType="vm:MainViewModel">
+    <!-- One pad: its name, reading and writing it, its layers drawn as the pad looks, and the selected key's editor. -->
+    <DockPanel>
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="24,16,24,8">
+            <StackPanel Spacing="2">
+                <TextBox Classes="title" Text="{Binding PadName}" PlaceholderText="{Binding PadNamePlaceholder}"
+                         Width="320" HorizontalAlignment="Left" ToolTip.Tip="Name this pad" />
+                <TextBlock Text="{Binding DeviceStatus}" Classes="muted" TextWrapping="Wrap" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" IsVisible="{Binding IsConnected}">
+                <Button Command="{Binding RotateCommand}" ToolTip.Tip="Turn the drawing a quarter turn, to match how the pad sits on your desk">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <PathIcon Data="{StaticResource Icon.RotateLeft}" />
+                        <TextBlock Text="Rotate" />
+                    </StackPanel>
+                </Button>
+                <Button Command="{Binding ReadCommand}" ToolTip.Tip="Read every layer from the pad, dropping changes not written yet">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <PathIcon Data="{StaticResource Icon.TrayArrowDown}" />
+                        <TextBlock Text="Read from pad" />
+                    </StackPanel>
+                </Button>
+                <Button Classes="accent" Command="{Binding WriteCommand}" ToolTip.Tip="Write the changed keys to the pad">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <PathIcon Data="{StaticResource Icon.TrayArrowUp}" />
+                        <TextBlock Text="Write to pad" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Grid>
+
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="20,0,24,0" IsVisible="{Binding IsConnected}">
+        <ListBox Classes="tabs" ItemsSource="{Binding Layers}" SelectedItem="{Binding SelectedLayer}">
+            <ListBox.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <StackPanel Orientation="Horizontal" />
+                </ItemsPanelTemplate>
+            </ListBox.ItemsPanel>
+            <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:LayerViewModel">
+                    <TextBlock Text="{Binding Title}" />
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="16" IsVisible="{Binding HasKeyLights}">
+                <RadioButton Classes="view" GroupName="view" IsChecked="{Binding !IsLightsMode}">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <PathIcon Data="{StaticResource Icon.KeyboardOutline}" />
+                        <TextBlock Text="Keys" />
+                    </StackPanel>
+                </RadioButton>
+                <RadioButton Classes="view" GroupName="view" IsChecked="{Binding IsLightsMode}">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <PathIcon Data="{StaticResource Icon.LightbulbOutline}" />
+                        <TextBlock Text="Lights" />
+                    </StackPanel>
+                </RadioButton>
+            </StackPanel>
+        </Grid>
+        <Border DockPanel.Dock="Top" Height="1" Background="{DynamicResource Brush.Border}" Margin="24,0" IsVisible="{Binding IsConnected}" />
+
+        <Grid ColumnDefinitions="Auto,*" IsVisible="{Binding IsConnected}">
+            <ScrollViewer>
+                <StackPanel Margin="24" Spacing="20">
+                    <Border Classes="card" Padding="20" HorizontalAlignment="Left">
+                        <ItemsControl Name="Pad" ItemsSource="{Binding SelectedLayer.Places}"
+                                      Width="{Binding SelectedLayer.Width}" Height="{Binding SelectedLayer.Height}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <Canvas />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.Styles>
+                                <Style Selector="ItemsControl#Pad > ContentPresenter" x:DataType="vm:PlaceViewModel">
+                                    <Setter Property="Canvas.Left" Value="{Binding Left}" />
+                                    <Setter Property="Canvas.Top" Value="{Binding Top}" />
+                                </Style>
+                            </ItemsControl.Styles>
+                            <ItemsControl.DataTemplates>
+                                <DataTemplate DataType="vm:KeyPlaceViewModel">
+                                    <Button Classes="keycap" Classes.selected="{Binding Slot.IsSelected}" Classes.lit="{Binding Light.IsSelected, FallbackValue=False}"
+                                            Width="{Binding Size}" Height="{Binding Size}"
+                                            Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).SelectSlotCommand}" CommandParameter="{Binding Slot}"
+                                            ToolTip.Tip="{Binding Slot.Summary}">
+                                        <Grid RowDefinitions="Auto,*">
+                                            <Grid ColumnDefinitions="*,Auto">
+                                                <TextBlock Text="{Binding Number}" Classes="keynum" />
+                                                <Ellipse Grid.Column="1" Width="7" Height="7" Fill="{DynamicResource Brush.Warning}" VerticalAlignment="Center"
+                                                         IsVisible="{Binding Slot.IsDirty}" ToolTip.Tip="Not written to the pad yet" />
+                                            </Grid>
+                                            <Border Grid.Row="1" Margin="6,4,6,6" CornerRadius="4" Background="{Binding Light.Brush, FallbackValue={x:Null}}"
+                                                    BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1"
+                                                    IsVisible="{Binding $parent[Window].((vm:MainViewModel)DataContext).IsLightsMode}" />
+                                            <StackPanel Grid.Row="1" Spacing="1" VerticalAlignment="Center"
+                                                        IsVisible="{Binding !$parent[Window].((vm:MainViewModel)DataContext).IsLightsMode}">
+                                                <PathIcon Data="{Binding Slot.Kind, Converter={x:Static local:Converters.KindIcon}}" Width="14" Height="14"
+                                                          Foreground="{DynamicResource Brush.TextMuted}" Margin="0,0,0,2" />
+                                                <TextBlock Text="{Binding Slot.CapTitle}" FontSize="12" FontWeight="SemiBold" TextAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Text="{Binding Slot.CapDetail}" FontSize="11" Classes="muted" TextAlignment="Center" TextWrapping="Wrap"
+                                                           MaxLines="2" TextTrimming="CharacterEllipsis" />
+                                            </StackPanel>
+                                        </Grid>
+                                    </Button>
+                                </DataTemplate>
+                                <DataTemplate DataType="vm:KnobPlaceViewModel">
+                                    <Grid Width="{Binding Size}" Height="{Binding Size}" RowDefinitions="*,Auto"
+                                          IsEnabled="{Binding !$parent[Window].((vm:MainViewModel)DataContext).IsLightsMode}"
+                                          ToolTip.Tip="Knobs have no lights">
+                                        <Grid ColumnDefinitions="*,Auto,*">
+                                            <Button Classes="turn" Classes.selected="{Binding TurnLeft.IsSelected}" HorizontalAlignment="Right"
+                                                    Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).SelectSlotCommand}" CommandParameter="{Binding TurnLeft}"
+                                                    ToolTip.Tip="{Binding TurnLeft.Summary, StringFormat='Turn left: {0}'}">
+                                                <PathIcon Data="{StaticResource Icon.RotateLeft}" />
+                                            </Button>
+                                            <Button Grid.Column="1" Classes="keycap knob" Classes.selected="{Binding Press.IsSelected}" Width="72" Height="72"
+                                                    Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).SelectSlotCommand}" CommandParameter="{Binding Press}"
+                                                    ToolTip.Tip="{Binding Press.Summary, StringFormat='Press: {0}'}">
+                                                <StackPanel Spacing="2" VerticalAlignment="Center" HorizontalAlignment="Center">
+                                                    <PathIcon Data="{Binding Press.Kind, Converter={x:Static local:Converters.KindIcon}}" Width="14" Height="14"
+                                                              Foreground="{DynamicResource Brush.TextMuted}" />
+                                                    <TextBlock Text="{Binding Press.CapTitle}" FontSize="11" FontWeight="SemiBold" TextAlignment="Center"
+                                                               TextTrimming="CharacterEllipsis" MaxWidth="56" />
+                                                    <TextBlock Text="{Binding Press.CapDetail}" FontSize="10" Classes="muted" TextAlignment="Center" TextWrapping="Wrap"
+                                                               MaxLines="2" TextTrimming="CharacterEllipsis" MaxWidth="56" />
+                                                </StackPanel>
+                                            </Button>
+                                            <Button Grid.Column="2" Classes="turn" Classes.selected="{Binding TurnRight.IsSelected}" HorizontalAlignment="Left"
+                                                    Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).SelectSlotCommand}" CommandParameter="{Binding TurnRight}"
+                                                    ToolTip.Tip="{Binding TurnRight.Summary, StringFormat='Turn right: {0}'}">
+                                                <PathIcon Data="{StaticResource Icon.RotateRight}" />
+                                            </Button>
+                                        </Grid>
+                                        <TextBlock Grid.Row="1" Text="{Binding Label}" Classes="keynum" HorizontalAlignment="Center" Margin="0,4,0,0" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.DataTemplates>
+                        </ItemsControl>
+                    </Border>
+
+                    <!-- Lights on pads that take one mode and colour per layer -->
+                    <StackPanel Spacing="8" IsVisible="{Binding HasLayerLights}" MaxWidth="360" HorizontalAlignment="Left">
+                        <TextBlock Text="Lights on this layer" Classes="label" />
+                        <Grid ColumnDefinitions="*,8,*">
+                            <ComboBox HorizontalAlignment="Stretch" ItemsSource="{x:Static vm:MainViewModel.LedModes}" SelectedItem="{Binding LedMode}">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Converter={x:Static local:Converters.Words}}" />
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                            <ComboBox Grid.Column="2" HorizontalAlignment="Stretch" ItemsSource="{x:Static vm:MainViewModel.LedColors}" SelectedItem="{Binding LedColor}">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Converter={x:Static local:Converters.Words}}" />
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                        </Grid>
+                        <Button Command="{Binding ApplyLedCommand}">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <PathIcon Data="{StaticResource Icon.LightbulbOutline}" />
+                                <TextBlock Text="Apply lights" />
+                            </StackPanel>
+                        </Button>
+                        <TextBlock Classes="note" Text="Lights are written straight away. This pad can't report its light setting, so this doesn't show what's on it now." />
+                    </StackPanel>
+                </StackPanel>
+            </ScrollViewer>
+
+            <Border Grid.Column="1" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1,0,0,0">
+                <Panel>
+                <ScrollViewer IsVisible="{Binding !IsLightsMode}">
+                    <views:SlotEditor Margin="24" DataContext="{Binding SelectedSlot}"
+                                      IsVisible="{Binding $parent[Window].((vm:MainViewModel)DataContext).SelectedSlot, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                </ScrollViewer>
+                <ScrollViewer IsVisible="{Binding IsLightsMode}">
+                    <StackPanel Margin="24" Spacing="20" MaxWidth="560" HorizontalAlignment="Left">
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="{Binding SelectedLayer.Title, StringFormat='Lights on {0}'}" Classes="title" />
+                            <TextBlock Classes="muted" TextWrapping="Wrap" Text="Each layer has its own lights. Changes go to the pad as you make them." />
+                        </StackPanel>
+
+                        <StackPanel Spacing="6">
+                            <TextBlock Text="Mode" Classes="label" />
+                            <ListBox Classes="nav" Padding="0" ItemsSource="{x:Static vm:MainViewModel.KeyLightModes}" SelectedItem="{Binding SelectedLightMode}">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:KeyLightModeChoice">
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                                            <TextBlock Text="{Binding Description}" Classes="note" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </StackPanel>
+
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="{Binding SelectedLight.Label, StringFormat='{}{0} colour'}" Classes="label" />
+                            <TextBlock Classes="note" Text="Click a key on the pad to pick it. Knobs have no lights." />
+                            <ItemsControl ItemsSource="{x:Static vm:MainViewModel.Swatches}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="Color">
+                                        <Button Classes="swatch" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).UseSwatchCommand}" CommandParameter="{Binding}">
+                                            <Border CornerRadius="3" Background="{Binding Converter={x:Static local:Converters.Brush}}" />
+                                        </Button>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <ColorView Color="{Binding LightColor}" IsAlphaEnabled="False" IsAlphaVisible="False" IsColorPaletteVisible="False"
+                                       IsAccentColorsVisible="False" HorizontalAlignment="Left" />
+                            <Button Command="{Binding ColorAllKeysCommand}">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <PathIcon Data="{StaticResource Icon.PaletteOutline}" />
+                                    <TextBlock Text="Use this colour on every key" />
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+                    </StackPanel>
+                </ScrollViewer>
+                </Panel>
+            </Border>
+        </Grid>
+    </DockPanel>
+</UserControl>

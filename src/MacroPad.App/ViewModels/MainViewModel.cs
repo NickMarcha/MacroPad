@@ -11,23 +11,24 @@ using MacroPad.Core.Updates;
 
 namespace MacroPad.App.ViewModels;
 
-public partial class LayerViewModel(int number, IReadOnlyList<SlotViewModel> buttons, IReadOnlyList<SlotViewModel> knobs, int keyColumns) : ViewModelBase
+/// <summary>A pad in the sidebar: one plugged in by USB, one on Bluetooth, or a named one that is neither.</summary>
+public sealed partial class PadChoice(ConnectedPad? pad, PadRecord record, bool onBluetooth) : ObservableObject
 {
-    /// <summary>Keys across, to lay them out as they sit on the pad.</summary>
-    public int KeyColumns { get; } = keyColumns;
-    public int Number { get; } = number;
-    public string Title => $"Layer {Number}";
-    public IReadOnlyList<SlotViewModel> Buttons { get; } = buttons;
-    public IReadOnlyList<SlotViewModel> Knobs { get; } = knobs;
-    public IEnumerable<SlotViewModel> All => Buttons.Concat(Knobs);
-    public string KnobHeading => Knobs.Count > 3 ? "KNOBS" : "KNOB";
-}
+    public ConnectedPad? Pad { get; } = pad;
+    public PadRecord Record { get; } = record;
+    public bool IsConnected => Pad is not null;
+    public bool OnBluetooth { get; } = onBluetooth;
+    public string Label => Record.Label;
+    public string Detail => (Pad, OnBluetooth) switch
+    {
+        (not null, true) => "USB and Bluetooth",
+        (not null, false) => "USB",
+        (null, true) => "Bluetooth",
+        _ => "Not connected",
+    };
 
-/// <summary>A pad in the header's list.</summary>
-public sealed record PadChoice(ConnectedPad Pad, PadRecord Record)
-{
-    public string Label => $"{Record.Label} · {Pad.Model}";
-    public override string ToString() => Label;
+    /// <summary>After a rename.</summary>
+    public void Refresh() => OnPropertyChanged(nameof(Label));
 }
 
 public partial class MainViewModel : ViewModelBase, IDisposable
@@ -132,9 +133,6 @@ public partial class MainViewModel : ViewModelBase, IDisposable
     [ObservableProperty, NotifyCanExecuteChangedFor(nameof(ReadCommand), nameof(WriteCommand), nameof(ApplyLedCommand))]
     public partial bool IsConnected { get; set; }
 
-    /// <summary>Whether MacroPad can set the open pad's lights (unknown on some models).</summary>
-    [ObservableProperty] public partial bool HasLights { get; set; } = true;
-
     [ObservableProperty, NotifyCanExecuteChangedFor(nameof(ReadCommand), nameof(WriteCommand), nameof(ApplyLedCommand), nameof(ConnectCommand))]
     public partial bool IsBusy { get; set; }
 
@@ -147,16 +145,26 @@ public partial class MainViewModel : ViewModelBase, IDisposable
 
     bool CanUseDevice => IsConnected && !IsBusy;
 
-    partial void OnSelectedLayerChanged(LayerViewModel? value) => SelectedSlot = value?.Buttons.FirstOrDefault();
+    // The same key or knob action on the new layer, so switching layers compares like with like.
+    partial void OnSelectedLayerChanged(LayerViewModel? value)
+    {
+        SelectedSlot = value?.All.FirstOrDefault(s => s.Slot == SelectedSlot?.Slot) ?? value?.Buttons.FirstOrDefault();
+        ShowLightsOf(value);
+    }
 
     partial void OnSelectedSlotChanged(SlotViewModel? oldValue, SlotViewModel? newValue)
     {
         if (oldValue is not null) oldValue.IsSelected = false;
-        if (newValue is not null) newValue.IsSelected = true;
+        if (newValue is not null) newValue.IsSelected = !IsLightsMode;
     }
 
+    /// <summary>A click on a key or knob: what it does, or in the Lights view, its colour (knobs have no lights).</summary>
     [RelayCommand]
-    void SelectSlot(SlotViewModel slot) => SelectedSlot = slot;
+    void SelectSlot(SlotViewModel slot)
+    {
+        if (!IsLightsMode) SelectedSlot = slot;
+        else if (SelectedLayer?.KeyLights.FirstOrDefault(k => k.Slot == slot.Slot && slot.Slot <= Protocol.MaxButtons) is { } light) SelectedLight = light;
+    }
 
     [RelayCommand(CanExecute = nameof(CanConnect))]
     public async Task ConnectAsync()
@@ -169,41 +177,63 @@ public partial class MainViewModel : ViewModelBase, IDisposable
     /// <summary>Lists the pads plugged in now, and opens the chosen one if it isn't open (or <paramref name="reopen"/>).</summary>
     async Task RefreshPadsAsync(bool reopen = false)
     {
-        var connected = await Task.Run(Pads.Connected);
+        var (connected, addresses) = await Task.Run(() => (Pads.Connected(), PadIds.BluetoothAddresses()));
         var known = Settings.Pads.Count;
-        var choices = connected.Select(c => new PadChoice(c, Settings.PadFor(c.Key))).OrderBy(c => c.Record.Number).ToList();
-        if (Settings.Pads.Count != known) SaveSettings();
+        var usb = connected.Select(c => (Pad: c, Record: Settings.PadFor(c.Key))).ToList();
+        var onBluetooth = Pads.LinkBluetooth(Settings, addresses, out var linked).Values.ToHashSet();
+        if (Settings.Pads.Count != known || linked) SaveSettings();
+        var choices = usb.Select(u => new PadChoice(u.Pad, u.Record, onBluetooth.Contains(u.Record))).ToList();
+        // Pads on Bluetooth only, and named or Bluetooth pads that are off or unplugged, so they don't vanish from the list.
+        var plugged = usb.Select(u => u.Record).ToHashSet();
+        choices.AddRange(Settings.Pads.Where(r => !plugged.Contains(r) && (onBluetooth.Contains(r) || r.Name is not null || r.Bluetooth is not null))
+            .Select(r => new PadChoice(null, r, onBluetooth.Contains(r))));
+        choices = choices.OrderBy(c => c.Record.Number).ToList();
 
-        var keep = SelectedPad?.Pad.Key;
+        var keep = SelectedPad?.Record.Key;
         _choosingPad = true;
         PadChoices.Clear();
         foreach (var c in choices) PadChoices.Add(c);
-        var choice = choices.FirstOrDefault(c => c.Pad.Key == keep) ?? choices.FirstOrDefault();
+        var choice = choices.FirstOrDefault(c => c.Record.Key == keep && c.IsConnected) ?? choices.FirstOrDefault(c => c.IsConnected)
+                     ?? choices.FirstOrDefault(c => c.Record.Key == keep) ?? choices.FirstOrDefault();
         SelectedPad = choice;
         _choosingPad = false;
-        HasSeveralPads = choices.Count > 1;
 
-        if (choice is null)
+        if (choice?.Pad is null)
         {
-            _device?.Dispose();
-            _device = null;
-            IsConnected = false;
-            DeviceStatus = OperatingSystem.IsLinux()
-                ? "No macropad found. Plugged in? On Linux, install the udev rule from the README."
-                : "No macropad found. Is it plugged in?";
+            ShowNotConnected(choice);
             return;
         }
         if (reopen || _device is null || _openKey != choice.Pad.Key) await OpenPadAsync(choice);
     }
 
+    void ShowNotConnected(PadChoice? choice)
+    {
+        _device?.Dispose();
+        _device = null;
+        _openKey = null;
+        IsConnected = false;
+        Layers = [];
+        SelectedSlot = null;
+        DeviceStatus = choice is { OnBluetooth: true }
+            ? "Connected by Bluetooth, so its keys work. The pad only lets its keys be read and changed over USB: plug it in to edit them."
+            : choice is { Record.Bluetooth: not null }
+            ? "Not connected. Switch it on to use it over Bluetooth, or plug it in by USB to see and change its keys."
+            : choice is not null
+            ? "Not connected. Plug it in by USB to see and change its keys."
+            : OperatingSystem.IsLinux()
+                ? "No macropad found. Plugged in? On Linux, install the udev rule from the README."
+                : "No macropad found. Is it plugged in by USB?";
+    }
+
     async Task OpenPadAsync(PadChoice choice)
     {
+        var pad = choice.Pad!;
         await Run("Connecting…", () =>
         {
             _device?.Dispose();
-            _device = MacroPadDevice.Open(choice.Pad.Device);
+            _device = MacroPadDevice.Open(pad.Device);
         });
-        _openKey = _device is null ? null : choice.Pad.Key;
+        _openKey = _device is null ? null : pad.Key;
         if (_device is null)
         {
             IsConnected = false;
@@ -211,46 +241,98 @@ public partial class MainViewModel : ViewModelBase, IDisposable
             return;
         }
         var (buttons, knobs) = (_device.Buttons, _device.Knobs);
-        var who = HasSeveralPads ? $"{choice.Record.Label} ({_device.Name})" : _device.Name;
-        DeviceStatus = $"Connected: {who} — {buttons} keys, {knobs} knob{(knobs == 1 ? "" : "s")}";
+        DeviceStatus = $"{_device.Name} · USB · {buttons} keys, {knobs} knob{(knobs == 1 ? "" : "s")}";
         IsConnected = true;
-        HasLights = _device.Model.HasLights;
+        HasLayerLights = _device.Model.Lights == LightKind.PerLayer;
+        HasKeyLights = _device.Model.Lights == LightKind.PerKey;
+        if (!HasKeyLights) IsLightsMode = false;
+        _layout = PadLayout.For(buttons, knobs);
         BuildLayers(choice.Record.Number, _device.Model, buttons, knobs);
         await ReadAsync();
     }
 
-    // The pads plugged in now, for the header's list; the one being edited.
+    // The pads in the sidebar; the one shown.
     public System.Collections.ObjectModel.ObservableCollection<PadChoice> PadChoices { get; } = [];
-    [ObservableProperty] public partial PadChoice? SelectedPad { get; set; }
-    [ObservableProperty] public partial bool HasSeveralPads { get; set; }
+    [ObservableProperty, NotifyPropertyChangedFor(nameof(PadName), nameof(PadNamePlaceholder))]
+    public partial PadChoice? SelectedPad { get; set; }
     bool _choosingPad;
     string? _openKey;
+    PadLayout _layout = PadLayout.For(0, 0);
+
+    /// <summary>Settings is shown instead of a pad.</summary>
+    [ObservableProperty] public partial bool IsSettingsOpen { get; set; }
+
+    [RelayCommand]
+    void OpenSettings()
+    {
+        IsSettingsOpen = true;
+        _choosingPad = true;
+        SelectedPad = null;
+        _choosingPad = false;
+    }
 
     partial void OnSelectedPadChanged(PadChoice? oldValue, PadChoice? newValue)
     {
-        if (_choosingPad || newValue is null || newValue.Pad.Key == _openKey) return;
+        if (_choosingPad || newValue is null) return;
+        IsSettingsOpen = false;
+        var openNow = PadChoices.FirstOrDefault(c => c.Pad?.Key == _openKey);
+        if (newValue.Pad is not null && newValue.Pad.Key == _openKey) return;
         if (Layers.SelectMany(l => l.All).Any(s => s.IsDirty))
         {
             Message = "Write or undo the changes on this pad before switching to another.";
-            Dispatcher.UIThread.Post(() => { _choosingPad = true; SelectedPad = oldValue; _choosingPad = false; });
+            Dispatcher.UIThread.Post(() => { _choosingPad = true; SelectedPad = openNow ?? oldValue; _choosingPad = false; });
             return;
         }
-        _ = OpenPadAsync(newValue);
+        if (newValue.Pad is null) ShowNotConnected(newValue);
+        else _ = OpenPadAsync(newValue);
+    }
+
+    /// <summary>The shown pad's name; empty goes back to "Pad N".</summary>
+    public string PadName
+    {
+        get => SelectedPad?.Record.Name ?? "";
+        set
+        {
+            if (SelectedPad is not { } pad) return;
+            pad.Record.Name = string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+            SaveSettings();
+            pad.Refresh();
+            OnPropertyChanged();
+        }
+    }
+
+    public string PadNamePlaceholder => SelectedPad is { } p ? $"Pad {p.Record.Number + 1}" : "";
+
+    /// <summary>
+    /// Turns the drawn pad a quarter turn anticlockwise, and remembers it for this pad. Anticlockwise because one turn
+    /// takes the vendor's drawing (knobs on the right) to the pad as it usually sits (knobs at the top).
+    /// </summary>
+    [RelayCommand]
+    void Rotate()
+    {
+        if (SelectedPad is not { } pad) return;
+        pad.Record.Rotation = (pad.Record.Rotation + 3) % 4;
+        SaveSettings();
+        foreach (var layer in Layers) layer.Arrange(_layout.Rotated(pad.Record.Rotation));
     }
 
     bool CanConnect() => !IsBusy;
 
     void BuildLayers(int pad, PadModel model, int buttons, int knobs)
     {
-        string[] actions = ["⟲ Turn left", "● Press", "⟳ Turn right"];
+        string[] actions = ["turn left", "press", "turn right"];
         var number = SelectedLayer?.Number ?? 1;
-        Layers = Enumerable.Range(1, Protocol.LayerCount).Select(layer => new LayerViewModel(
-            layer,
-            model.KeySlots(buttons).Select((slot, b) => new SlotViewModel(pad, layer, slot, $"Key {b + 1}", model.HasDelay)).ToList(),
-            Enumerable.Range(0, knobs).SelectMany(k => Enumerable.Range(0, 3).Select(a =>
-                new SlotViewModel(pad, layer, Protocol.KnobSlot(k, a), knobs == 1 ? actions[a] : $"Knob {k + 1} {actions[a]}", model.HasDelay))).ToList(),
-            model.KeyColumns
-        )).ToList();
+        var layout = _layout.Rotated(SelectedPad?.Record.Rotation ?? 0);
+        Layers = Enumerable.Range(1, Protocol.LayerCount).Select(layer =>
+        {
+            var l = new LayerViewModel(
+                layer,
+                Enumerable.Range(0, buttons).Select(b => new SlotViewModel(pad, layer, Protocol.ButtonSlot(b), $"Key {b + 1}", model.HasDelay)).ToList(),
+                Enumerable.Range(0, knobs).SelectMany(k => Enumerable.Range(0, 3).Select(a =>
+                    new SlotViewModel(pad, layer, Protocol.KnobSlot(k, a), $"Knob {k + 1}, {actions[a]}", model.HasDelay))).ToList());
+            l.Arrange(layout);
+            return l;
+        }).ToList();
         SelectedLayer = Layers[number - 1];
     }
 
@@ -259,15 +341,20 @@ public partial class MainViewModel : ViewModelBase, IDisposable
     {
         var device = _device!;
         var read = new Dictionary<int, Dictionary<int, Binding>>();
+        var lights = new Dictionary<int, KeyLights>();
         if (!await Run("Reading from the pad…", () =>
             {
                 for (int layer = 1; layer <= Protocol.LayerCount; layer++)
+                {
                     read[layer] = device.ReadLayer(layer);
+                    if (device.Model.Lights == LightKind.PerKey) lights[layer] = device.ReadKeyLights(layer);
+                }
             }))
             return;
         foreach (var layer in Layers)
             foreach (var slot in layer.All)
                 LoadSlot(slot, read[layer.Number].GetValueOrDefault(slot.Slot, new EmptyBinding()));
+        LoadLights(lights);
         Message = "Read all layers from the pad.";
     }
 

@@ -74,10 +74,24 @@ public sealed class MacroPadDevice : IDisposable
         Commit();
     }
 
+    /// <summary>One layer's lights, on pads with a colour per key.</summary>
+    public KeyLights ReadKeyLights(int layer)
+    {
+        Send(StepProtocol.ReadLights(layer));
+        return StepProtocol.ParseLights(Receive());
+    }
+
+    /// <summary>Sets one layer's lights on pads with a colour per key, and saves them.</summary>
+    public void WriteKeyLights(int layer, KeyLights lights)
+    {
+        Send(StepProtocol.WriteLights(layer, lights));
+        Commit();
+    }
+
     public void WriteLed(int layer, LedMode mode, LedColor color)
     {
-        if (!Model.HasLights)
-            throw new NotSupportedException("MacroPad doesn't know how to set this pad's lights.");
+        if (Model.Lights != LightKind.PerLayer)
+            throw new NotSupportedException("This pad sets a colour per key; use WriteKeyLights.");
         Send(Protocol.WriteLed(layer, mode, color));
         Commit();
     }

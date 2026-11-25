@@ -1,0 +1,180 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:MacroPad.App.ViewModels"
+             xmlns:local="using:MacroPad.App"
+             xmlns:core="using:MacroPad.Core"
+             x:Class="MacroPad.App.Views.SlotEditor"
+             x:DataType="vm:SlotViewModel">
+    <!-- What the selected key or knob action does. DataContext: the slot. -->
+    <StackPanel Spacing="20" MaxWidth="560" HorizontalAlignment="Left">
+        <StackPanel Spacing="2">
+            <TextBlock Text="{Binding Label}" Classes="title" />
+            <TextBlock Text="{Binding Summary}" Classes="muted" TextWrapping="Wrap" />
+        </StackPanel>
+
+        <StackPanel Spacing="6">
+            <TextBlock Text="Action" Classes="label" />
+            <ComboBox ItemsSource="{x:Static vm:SlotViewModel.Kinds}" SelectedItem="{Binding Kind}" MinWidth="220">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:BindingKind">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <PathIcon Data="{Binding Converter={x:Static local:Converters.KindIcon}}" />
+                            <TextBlock Text="{Binding Converter={x:Static local:Converters.Words}}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+        </StackPanel>
+
+        <!-- Keyboard -->
+        <StackPanel Spacing="16" IsVisible="{Binding IsKeyboard}">
+            <StackPanel Spacing="6">
+                <TextBlock Text="Record" Classes="label" />
+                <Border Classes="recorder" Focusable="True" KeyDown="Recorder_KeyDown" PointerPressed="Recorder_PointerPressed">
+                    <Grid ColumnDefinitions="Auto,10,*">
+                        <PathIcon Data="{StaticResource Icon.KeyboardOutline}" Foreground="{DynamicResource Brush.TextMuted}" />
+                        <TextBlock Grid.Column="2" TextWrapping="Wrap" Text="Click here, then press a key or combination (Ctrl+Shift+S). Each press adds a step." />
+                    </Grid>
+                </Border>
+            </StackPanel>
+
+            <StackPanel Spacing="6">
+                <TextBlock Text="Steps" Classes="label" />
+                <ItemsControl ItemsSource="{Binding Chords}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="core:KeyChord">
+                            <Border Background="{DynamicResource Brush.Raised}" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1"
+                                    CornerRadius="{DynamicResource Radius.Control}" Padding="10,2,2,2" Margin="0,0,6,6">
+                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                    <TextBlock Text="{Binding Converter={x:Static local:Converters.Chord}}" VerticalAlignment="Center" />
+                                    <Button Classes="icon" Padding="4" ToolTip.Tip="Remove this step"
+                                            Command="{Binding $parent[ItemsControl].((vm:SlotViewModel)DataContext).RemoveChordCommand}"
+                                            CommandParameter="{Binding}">
+                                        <PathIcon Data="{StaticResource Icon.Close}" Width="12" Height="12" />
+                                    </Button>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <Button Command="{Binding ClearChordsCommand}">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <PathIcon Data="{StaticResource Icon.TrashCanOutline}" />
+                        <TextBlock Text="Clear steps" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+
+            <StackPanel Spacing="6">
+                <TextBlock Text="Add a key by name" Classes="label" />
+                <TextBlock Text="For keys you can't press here: F13–F24, or ones your system catches first." Classes="note" />
+                <WrapPanel>
+                    <CheckBox Content="Ctrl" IsChecked="{Binding PickCtrl}" Margin="0,0,8,0" />
+                    <CheckBox Content="Shift" IsChecked="{Binding PickShift}" Margin="0,0,8,0" />
+                    <CheckBox Content="Alt" IsChecked="{Binding PickAlt}" Margin="0,0,8,0" />
+                    <CheckBox Content="Win/Super" IsChecked="{Binding PickWin}" Margin="0,0,8,0" />
+                </WrapPanel>
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <ComboBox ItemsSource="{x:Static vm:SlotViewModel.KeyChoices}" SelectedItem="{Binding PickedKey}"
+                              MinWidth="160" MaxDropDownHeight="320" PlaceholderText="Key" />
+                    <Button Command="{Binding AddPickedKeyCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <PathIcon Data="{StaticResource Icon.Plus}" />
+                            <TextBlock Text="Add step" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </StackPanel>
+
+            <StackPanel Spacing="6" IsVisible="{Binding HasDelay}">
+                <TextBlock Text="Delay between steps (ms)" Classes="label" />
+                <NumericUpDown Value="{Binding DelayMs}" Minimum="0" Maximum="6000" Increment="10" FormatString="0" Width="160" HorizontalAlignment="Left" />
+            </StackPanel>
+        </StackPanel>
+
+        <!-- Media -->
+        <StackPanel Spacing="6" IsVisible="{Binding IsMedia}">
+            <TextBlock Text="Media key" Classes="label" />
+            <ComboBox ItemsSource="{x:Static vm:SlotViewModel.MediaChoices}" SelectedItem="{Binding Media}" MinWidth="220" PlaceholderText="Choose…" />
+        </StackPanel>
+
+        <!-- Mouse -->
+        <StackPanel Spacing="16" IsVisible="{Binding IsMouse}">
+            <StackPanel Spacing="6">
+                <TextBlock Text="Buttons" Classes="label" />
+                <WrapPanel>
+                    <CheckBox Content="Left" IsChecked="{Binding MouseLeft}" Margin="0,0,8,0" />
+                    <CheckBox Content="Right" IsChecked="{Binding MouseRight}" Margin="0,0,8,0" />
+                    <CheckBox Content="Middle" IsChecked="{Binding MouseMiddle}" Margin="0,0,8,0" />
+                </WrapPanel>
+            </StackPanel>
+            <StackPanel Spacing="6">
+                <TextBlock Text="Hold" Classes="label" />
+                <WrapPanel>
+                    <CheckBox Content="Ctrl" IsChecked="{Binding MouseCtrl}" Margin="0,0,8,0" />
+                    <CheckBox Content="Shift" IsChecked="{Binding MouseShift}" Margin="0,0,8,0" />
+                    <CheckBox Content="Alt" IsChecked="{Binding MouseAlt}" Margin="0,0,8,0" />
+                    <CheckBox Content="Win/Super" IsChecked="{Binding MouseWin}" Margin="0,0,8,0" />
+                </WrapPanel>
+            </StackPanel>
+            <Grid ColumnDefinitions="Auto,12,Auto,12,Auto" RowDefinitions="Auto,6,Auto">
+                <TextBlock Text="Wheel (+ is up)" Classes="label" />
+                <TextBlock Grid.Column="2" Text="Move X" Classes="label" />
+                <TextBlock Grid.Column="4" Text="Move Y" Classes="label" />
+                <NumericUpDown Grid.Row="2" Value="{Binding Wheel}" Minimum="-127" Maximum="127" FormatString="0" Width="130" />
+                <NumericUpDown Grid.Row="2" Grid.Column="2" Value="{Binding MoveX}" Minimum="-127" Maximum="127" FormatString="0" Width="130" />
+                <NumericUpDown Grid.Row="2" Grid.Column="4" Value="{Binding MoveY}" Minimum="-127" Maximum="127" FormatString="0" Width="130" />
+            </Grid>
+        </StackPanel>
+
+        <!-- MacroPad action: Home Assistant, Bragi or a profile switch -->
+        <StackPanel Spacing="16" IsVisible="{Binding IsAction}">
+            <Border Background="{DynamicResource Brush.Selection}" CornerRadius="{DynamicResource Radius.Control}" Padding="10,8" IsVisible="{Binding IsInherited}">
+                <TextBlock TextWrapping="Wrap" FontSize="12"
+                           Text="This profile uses the default profile's action here. Change it to give this profile its own." />
+            </Border>
+            <Button IsVisible="{Binding !IsInherited}"
+                    IsEnabled="{Binding !$parent[Window].((vm:MainViewModel)DataContext).IsEditingDefault}"
+                    Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).UseDefaultActionCommand}">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <PathIcon Data="{StaticResource Icon.ArrowUDownLeft}" />
+                    <TextBlock Text="Use the default profile's action" />
+                </StackPanel>
+            </Button>
+            <StackPanel Spacing="6">
+                <TextBlock Text="Do" Classes="label" />
+                <ComboBox ItemsSource="{x:Static vm:SlotViewModel.PadCommands}" SelectedItem="{Binding PadCommand}" MinWidth="220">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Converter={x:Static local:Converters.Words}}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+            </StackPanel>
+            <StackPanel Spacing="6" IsVisible="{Binding NeedsProfile}">
+                <TextBlock Text="Profile" Classes="label" />
+                <ComboBox ItemsSource="{x:Static vm:SlotViewModel.ProfileNames}" SelectedItem="{Binding ProfileChoice}" MinWidth="220" />
+            </StackPanel>
+            <StackPanel Spacing="6" IsVisible="{Binding NeedsTarget}">
+                <TextBlock Text="On" Classes="label" />
+                <ComboBox ItemsSource="{x:Static vm:SlotViewModel.Targets}" SelectedItem="{Binding Target}" MinWidth="280"
+                          MaxDropDownHeight="360" PlaceholderText="Connect Home Assistant or Bragi first (Settings), then pick a target" />
+            </StackPanel>
+            <StackPanel Spacing="6" IsVisible="{Binding IsStepped}">
+                <TextBlock Text="Step per click" Classes="label" />
+                <NumericUpDown Value="{Binding HaStep}" Minimum="1" Maximum="255" Increment="1" FormatString="0" Width="130" HorizontalAlignment="Left" />
+                <TextBlock Text="In 255ths of full. Turning the knob fast takes up to 8× bigger steps, like mouse acceleration." Classes="note" />
+            </StackPanel>
+            <TextBlock Classes="note"
+                       Text="The pad sends a code your computer ignores, and MacroPad does the action using the active profile. Select makes a room or an audio control the one the knob controls (pick 'Selected target' as the knob's target). Toggle on an area works like a wall switch: if any light is on, all go off; on audio it mutes." />
+        </StackPanel>
+
+        <TextBlock Classes="note"
+                   Text="Changes are marked with a dot until you write them to the pad. They're stored on the pad, so they work on any computer without this app." />
+    </StackPanel>
+</UserControl>

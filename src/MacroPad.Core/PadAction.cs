@@ -30,6 +30,26 @@ public sealed record PadAction(
         return char.ToUpperInvariant(text[0]) + text[1..];
     }
 
+    /// <summary>For a keycap: the verb, and what it acts on (empty when nothing).</summary>
+    public (string Verb, string Subject) Short()
+    {
+        var name = Target?.Name ?? "";
+        var audio = Target?.Kind == TargetKind.Audio;
+        var light = Target?.IsLight == true;
+        return Command switch
+        {
+            PadCommand.Select => ("Select", name),
+            PadCommand.Toggle => (audio ? "Mute" : "Toggle", name),
+            PadCommand.TurnOn => (audio ? "Unmute" : "On", name),
+            PadCommand.TurnOff => (audio ? "Mute" : "Off", name),
+            PadCommand.Up => (audio ? "Louder" : light ? "Brighter" : "Up", name),
+            PadCommand.Down => (audio ? "Quieter" : light ? "Dimmer" : "Down", name),
+            PadCommand.NextProfile => ("Next profile", ""),
+            PadCommand.Profile => ("Profile", ProfileName ?? ""),
+            _ => (Command.ToString(), name),
+        };
+    }
+
     string Words()
     {
         var name = Target?.Name ?? "(nothing)";

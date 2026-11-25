@@ -9,7 +9,7 @@
         ShowInTaskbar="False" ShowActivated="False" Topmost="True"
         Background="Transparent" TransparencyLevelHint="Transparent">
 
-    <Border Background="#F0202228" BorderBrush="#40FFFFFF" BorderThickness="1" CornerRadius="12" Padding="16,12" Margin="0">
+    <Border Background="{DynamicResource Brush.Surface}" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" CornerRadius="{DynamicResource Radius.Card}" Padding="16,12" Margin="0">
         <StackPanel Spacing="4">
             <Grid ColumnDefinitions="*,Auto">
                 <TextBlock Text="{Binding Title}" FontSize="16" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />

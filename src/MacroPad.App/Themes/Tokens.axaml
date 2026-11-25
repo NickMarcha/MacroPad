@@ -1,0 +1,67 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!--
+    The design tokens. Views use these (DynamicResource) and never a colour of their own, so a theme is one dictionary
+    here. To add a theme: add a ThemeVariant to Themes.cs and a dictionary keyed by it below; anything it leaves out
+    comes from the variant it inherits (Dark or Light).
+    -->
+    <ResourceDictionary.ThemeDictionaries>
+        <ResourceDictionary x:Key="Dark">
+            <Color x:Key="Color.Background">#161618</Color>
+            <Color x:Key="Color.Surface">#1E1E21</Color>
+            <Color x:Key="Color.SurfaceHover">#26262A</Color>
+            <Color x:Key="Color.Raised">#2B2B30</Color>
+            <Color x:Key="Color.Border">#313136</Color>
+            <Color x:Key="Color.BorderStrong">#4A4A51</Color>
+            <Color x:Key="Color.Text">#ECECEE</Color>
+            <Color x:Key="Color.TextMuted">#A1A1A8</Color>
+            <Color x:Key="Color.Accent">#2A9D8F</Color>
+            <Color x:Key="Color.AccentText">#FFFFFF</Color>
+            <Color x:Key="Color.Selection">#332A9D8F</Color>
+            <Color x:Key="Color.Danger">#D9625A</Color>
+            <Color x:Key="Color.Warning">#D6A23E</Color>
+        </ResourceDictionary>
+        <ResourceDictionary x:Key="Light">
+            <Color x:Key="Color.Background">#F4F4F2</Color>
+            <Color x:Key="Color.Surface">#FFFFFF</Color>
+            <Color x:Key="Color.SurfaceHover">#ECECEA</Color>
+            <Color x:Key="Color.Raised">#FAFAF8</Color>
+            <Color x:Key="Color.Border">#DEDDD9</Color>
+            <Color x:Key="Color.BorderStrong">#BDBCB7</Color>
+            <Color x:Key="Color.Text">#1C1B19</Color>
+            <Color x:Key="Color.TextMuted">#5F5E5A</Color>
+            <Color x:Key="Color.Accent">#1F7A70</Color>
+            <Color x:Key="Color.AccentText">#FFFFFF</Color>
+            <Color x:Key="Color.Selection">#261F7A70</Color>
+            <Color x:Key="Color.Danger">#B9433B</Color>
+            <Color x:Key="Color.Warning">#A87414</Color>
+        </ResourceDictionary>
+    </ResourceDictionary.ThemeDictionaries>
+
+    <SolidColorBrush x:Key="Brush.Background" Color="{DynamicResource Color.Background}" />
+    <SolidColorBrush x:Key="Brush.Surface" Color="{DynamicResource Color.Surface}" />
+    <SolidColorBrush x:Key="Brush.SurfaceHover" Color="{DynamicResource Color.SurfaceHover}" />
+    <SolidColorBrush x:Key="Brush.Raised" Color="{DynamicResource Color.Raised}" />
+    <SolidColorBrush x:Key="Brush.Border" Color="{DynamicResource Color.Border}" />
+    <SolidColorBrush x:Key="Brush.BorderStrong" Color="{DynamicResource Color.BorderStrong}" />
+    <SolidColorBrush x:Key="Brush.Text" Color="{DynamicResource Color.Text}" />
+    <SolidColorBrush x:Key="Brush.TextMuted" Color="{DynamicResource Color.TextMuted}" />
+    <SolidColorBrush x:Key="Brush.Accent" Color="{DynamicResource Color.Accent}" />
+    <SolidColorBrush x:Key="Brush.AccentText" Color="{DynamicResource Color.AccentText}" />
+    <SolidColorBrush x:Key="Brush.Selection" Color="{DynamicResource Color.Selection}" />
+    <SolidColorBrush x:Key="Brush.Danger" Color="{DynamicResource Color.Danger}" />
+    <SolidColorBrush x:Key="Brush.Warning" Color="{DynamicResource Color.Warning}" />
+
+    <!-- Fluent's own brushes that otherwise stay black on the dark theme -->
+    <SolidColorBrush x:Key="ExpanderHeaderBackground" Color="{DynamicResource Color.Surface}" />
+    <SolidColorBrush x:Key="ExpanderHeaderBackgroundPointerOver" Color="{DynamicResource Color.SurfaceHover}" />
+    <SolidColorBrush x:Key="ExpanderHeaderBackgroundPressed" Color="{DynamicResource Color.SurfaceHover}" />
+    <SolidColorBrush x:Key="ExpanderHeaderBorderBrush" Color="{DynamicResource Color.Border}" />
+    <SolidColorBrush x:Key="ExpanderContentBackground" Color="{DynamicResource Color.Background}" />
+    <SolidColorBrush x:Key="ExpanderContentBorderBrush" Color="{DynamicResource Color.Border}" />
+
+    <CornerRadius x:Key="Radius.Control">6</CornerRadius>
+    <CornerRadius x:Key="Radius.Card">8</CornerRadius>
+    <x:Double x:Key="Size.Icon">16</x:Double>
+    <x:Double x:Key="Size.Sidebar">248</x:Double>
+</ResourceDictionary>

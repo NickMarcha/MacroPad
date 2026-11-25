@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Threading;
@@ -46,6 +47,20 @@ public partial class MainViewModel
             OnPropertyChanged();
             // A preview, so you see where it goes.
             Toast.ShowMessage("Pop-ups appear here", "MacroPad");
+        }
+    }
+
+    public static IReadOnlyList<ThemeChoice> ThemeChoices => Themes.All;
+
+    public ThemeChoice Theme
+    {
+        get => Themes.Find(Settings.Theme);
+        set
+        {
+            Settings.Theme = value.Name;
+            SaveSettings();
+            Themes.Apply(value);
+            OnPropertyChanged();
         }
     }
 

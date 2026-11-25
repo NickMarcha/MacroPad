@@ -36,6 +36,7 @@ public partial class App : Application
         {
             _desktop = desktop;
             _vm = new MainViewModel();
+            Themes.Apply(_vm.Theme);
             // The window can close while MacroPad stays in the tray listening to the pad.
             desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
             desktop.Exit += (_, _) =>
