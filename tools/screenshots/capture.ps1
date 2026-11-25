@@ -5,7 +5,7 @@ Screenshots for the README, made against stand-in services so no real home or au
   2. dotnet run tools/screenshots/demo-settings.cs -- tools/screenshots/out/demo-settings.json
   3. dotnet publish src/MacroPad.App -c Release -r win-x64 -p:Version=9.9.9 -o tools/screenshots/out/app
   4. Quit your own MacroPad (single instance: a second one would hand over to it), then
-     pwsh tools/screenshots/capture.ps1 windows     -> out/pad.png, out/settings.png
+     pwsh tools/screenshots/capture.ps1 windows     -> out/pad.png, out/pad-12.png, out/settings.png
      pwsh tools/screenshots/capture.ps1 popup 60    -> out/popup-NN.png while you press pad keys
      pwsh tools/screenshots/capture.ps1 restore     -> your own settings back, demo app closed
 
@@ -49,6 +49,18 @@ function Snap([IntPtr]$h, [string]$file) {
   $crop = New-Object System.Drawing.Rectangle ($f.L - $w.L), ($f.T - $w.T), ($f.R - $f.L), ($f.B - $f.T)
   $full.Clone($crop, $full.PixelFormat).Save((Join-Path $out $file)); "saved $file"
 }
+# Clicks the element with this name, or the nearest ancestor that can be clicked or selected (a keycap's text, a list item).
+function Click($win, [string]$name) {
+  $el = $win.FindFirst($T::Descendants, (New-Object System.Windows.Automation.PropertyCondition($A::NameProperty, $name)))
+  $walker = [System.Windows.Automation.TreeWalker]::ControlViewWalker
+  while ($el) {
+    $o = $null
+    if ($el.TryGetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern, [ref]$o)) { $o.Invoke(); Start-Sleep 2; return }
+    if ($el.TryGetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern, [ref]$o)) { $o.Select(); Start-Sleep 2; return }
+    $el = $walker.GetParent($el)
+  }
+  throw "Nothing called '$name' to click"
+}
 function DemoApp { Get-Process MacroPad -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq $exe } | Select-Object -First 1 }
 $A = [System.Windows.Automation.AutomationElement]; $T = [System.Windows.Automation.TreeScope]
 
@@ -60,8 +72,9 @@ switch ($Step) {
     $p = Start-Process $exe -PassThru; Start-Sleep 12; $p.Refresh()
     Snap $p.MainWindowHandle 'pad.png'
     $win = $A::RootElement.FindFirst($T::Children, (New-Object System.Windows.Automation.PropertyCondition($A::ProcessIdProperty, $p.Id)))
-    $tab = $win.FindFirst($T::Descendants, (New-Object System.Windows.Automation.PropertyCondition($A::NameProperty, 'Settings')))
-    $tab.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select(); Start-Sleep 1
+    # The 12-key pad, on a layer with something on every key; skipped when only one pad is plugged in.
+    try { Click $win 'Pad 2'; Click $win 'Layer 2'; Snap $p.MainWindowHandle 'pad-12.png' } catch { "no second pad: $_" }
+    Click $win 'Settings'
     Snap $p.MainWindowHandle 'settings.png'
   }
   'popup' {

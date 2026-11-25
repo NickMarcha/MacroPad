@@ -222,6 +222,19 @@
         <Setter Property="BorderBrush" Value="{DynamicResource Brush.Accent}" />
         <Setter Property="Background" Value="{DynamicResource Brush.Selection}" />
     </Style>
+    <!-- Knobs in the Lights view: faded, without Fluent's grey disabled fill -->
+    <Style Selector="Button.keycap:disabled /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource Brush.Raised}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border}" />
+    </Style>
+    <Style Selector="Button.turn:disabled /template/ ContentPresenter">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+    </Style>
+    <Style Selector="Button.keycap:disabled, Button.turn:disabled">
+        <Setter Property="Opacity" Value="0.45" />
+    </Style>
+
     <!-- Where a dragged key would land -->
     <Style Selector="Button.keycap.drop /template/ ContentPresenter, Button.turn.drop /template/ ContentPresenter">
         <Setter Property="BorderBrush" Value="{DynamicResource Brush.Accent}" />

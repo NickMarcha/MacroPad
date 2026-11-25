@@ -13,11 +13,11 @@ MacroPad does two things:
    [Bragi](https://github.com/NickMarcha/bragi), or switch MacroPad's **profiles** (virtual layers that change what those keys do). For these,
    MacroPad runs in the tray and shows a pop-up for each change.
 
-![The Pad tab: layers, the profile, and each key's action](docs/images/pad.png)
+![A pad drawn as it is, its keys' actions, and the selected key's editor](docs/images/pad.png)
 
-| Settings | Pop-up |
-|---|---|
-| ![The Settings tab with the connections list](docs/images/settings.png) | ![A pop-up showing a room's brightness with a slider](docs/images/popup.png) |
+| The 12-key pad | Settings | Pop-up |
+|---|---|---|
+| ![The 12-key two-knob pad on its second layer](docs/images/pad-12.png) | ![Settings with the connections list and the pop-up position](docs/images/settings.png) | ![A pop-up showing a room's brightness with a slider](docs/images/popup.png) |
 
 ## Install
 
@@ -32,19 +32,33 @@ MacroPad does two things:
 
 ## 1. Programming the pad
 
-The **Pad** tab reads all three of the pad's layers. Pick a key or a knob action (turn left, press, turn right),
-choose what it does, and press *Write to pad*:
+Pick a pad in the sidebar and MacroPad reads all three of its layers and draws the pad as it looks. Click a key or a
+knob (turn left, press, turn right), choose what it does, and press *Write to pad*:
 
 - a keyboard shortcut, or a macro of up to 18 steps with an optional delay between them. Record the steps by
   pressing keys, or pick keys by name (F13–F24, or keys the OS grabs);
 - a media key (volume, play/pause, next track, …);
 - a mouse click, wheel or move, with modifiers held.
 
-The lights are set per layer (mode and color). Which layer the pad is on is chosen on the pad itself.
+Changed keys get a dot until they're written. Editing works like elsewhere:
 
-Tested with USB IDs `514C:8851` (3 keys, 1 knob) and `514C:8850` (12 keys, 2 knobs). The 12-key pad's keys are
-set over USB; its MacroPad actions also work over Bluetooth once it's paired in Windows. MacroPad doesn't set its
-lights yet. MacroPad also looks for the
+- *Undo* and *Redo* (Ctrl+Z, Ctrl+Y) go back and forth through every change since the pad was read;
+- *Copy*, *Cut*, *Paste* and *Clear* (Ctrl+C, Ctrl+X, Ctrl+V, Delete) work on the selected key;
+- drag a key onto another to swap them, or hold Ctrl to copy it; drop it on a layer tab to swap it with the same key
+  on that layer. Right-click a key for the same;
+- the *Layer* menu copies, swaps or clears a whole layer.
+
+*Rotate* turns the drawing to match how the pad sits on your desk, and clicking the pad's name renames it. Which
+layer the pad is on is chosen on the pad itself.
+
+**Lights.** The 3-key pad takes a mode and colour per layer. The 12-key pad has a colour per key: switch to
+*Lights*, pick a mode (on, when pressed, spreading from the press, rainbow, wave) and click keys to colour them. The
+same copy, paste, drag and undo work on colours. Its lights change on the pad as you edit them.
+
+**Bluetooth.** The 12-key pad's keys are set over USB. Paired in Windows, its MacroPad actions also work over
+Bluetooth, and the sidebar shows whether it's on USB, Bluetooth or both.
+
+Tested with USB IDs `514C:8851` (3 keys, 1 knob) and `514C:8850` (12 keys, 2 knobs). MacroPad also looks for the
 other IDs the vendor app supports (`1189`/`514C` with PIDs `8830`–`8833`, `8840`, `8842`), but those have not been
 tested.
 [docs/protocol.md](docs/protocol.md) describes how the protocol was worked out.
@@ -92,28 +106,30 @@ The profile picked in the window is the active one and the one you edit. To swit
   `macropad --profile next` or `macropad --profile <name>` (on Linux, in your desktop's keyboard settings);
 - the command line: a second `macropad` hands its arguments to the running one, so only one ever runs.
 
-**Export and import.** Under the profile list, *Export* saves the profile you're editing (or all of them) to a
-`.macropad.json` file, and *Import* adds the profiles from one; a name that's taken gets "(2)". The file holds only
-the profiles (what each action key does, and the knob's selection), never connection settings, tokens or keys, so it's
-safe to share. Targets name Home Assistant areas and lights and Bragi controls by id, so they work where the same ones
-exist. After an import, keys the profile uses that aren't MacroPad actions on this pad yet are switched to actions and
-marked as changes: *Write to pad* finishes the job.
+**Export and import.** The pencil next to the profile has *Rename*, *New*, *Make default* and *Delete*; its *Export*
+saves the profile you're editing (or all of them) to a `.macropad.json` file, and *Import* adds the profiles from one;
+a name that's taken gets "(2)". The file holds only the profiles (what each action key does, and the knob's
+selection), never connection settings, tokens or keys, so it's safe to share. Targets name Home Assistant areas and
+lights and Bragi controls by id, so they work where the same ones exist. After an import, keys the profile uses that
+aren't MacroPad actions on this pad yet are switched to actions and marked as changes: *Write to pad* finishes the
+job.
 
 Per-application profiles would build on this: a rule that picks the profile for the app in front.
 
 ### Several pads
 
 MacroPad works with several pads at once, also several of the same model. Each pad gets a number, and its action keys
-send codes from that number's own block, so a press says which pad it came from whichever USB port it's in. With
-more than one plugged in, a list in the header picks the pad to edit. Profiles cover all pads: a profile can give each
+send codes from that number's own block, so a press says which pad it came from whichever USB port it's in. The
+sidebar lists them; a pad you've named, or one paired over Bluetooth, stays listed while it's unplugged. Profiles cover all pads: a profile can give each
 pad's keys their own actions.
 
 A pad is recognised by its USB serial number. Pads that share a serial (cheap ones from one batch can) are told apart
-by their USB port instead; keep each in its port. Only one pad has been tested so far.
+by their USB port instead; keep each in its port. Two pads of different models have been tested together.
 
 ## Connections
 
-Settings → **Connections** lists the services MacroPad drives. Each one, once connected, adds its lights or audio
+**Settings** (bottom of the sidebar) holds what applies to the whole app: connections, theme (System, Dark, Light),
+pop-ups and the profile shortcut. **Connections** lists the services MacroPad drives. Each one, once connected, adds its lights or audio
 controls to the targets an action can use.
 
 ### Home Assistant (lights)
@@ -201,7 +217,8 @@ covers the one-time AUR setup).
   settings (`AppSettings.cs`), targets and the service interface (`Target.cs`), the knob's dial (`LevelDial.cs`),
   the Home Assistant client (`HomeAssistant/`), the Bragi client (`Bragi/`), key and media names, and install
   detection and self-update (`Updates/`).
-- `src/MacroPad.App`: the Avalonia UI.
+- `src/MacroPad.App`: the Avalonia UI. Colours, sizes and icons live in `Themes/`, so another theme is one more
+  dictionary there.
 - `tests/MacroPad.Core.Tests`: protocol tests built from real reports the pad sent, and tests for the services,
   profiles, the dial and updates.
 - `packaging/`: the Linux desktop entry, icon and udev rule, and the AUR package.
@@ -212,8 +229,8 @@ covers the one-time AUR setup).
 
 ## Known limitations
 
-- The pad cannot report its current light setting, so the lights panel shows what you are about to set, not what is
-  on the pad now.
+- The 3-key pad cannot report its current light setting, so its lights panel shows what you are about to set, not
+  what is on the pad now. The 12-key pad's lights are read from it.
 - Tested on Windows 11 and on CachyOS (KDE Plasma, the AUR package). Other Linux desktops should work but haven't
   been tried; on X11 the pop-up is a notification window, which window managers keep on top.
 - The Windows build is not code-signed, so SmartScreen warns the first time it runs.
