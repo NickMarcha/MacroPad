@@ -23,6 +23,12 @@ public partial class LayerViewModel(int number, IReadOnlyList<SlotViewModel> but
 
     [ObservableProperty] public partial KeyLightMode LightMode { get; set; }
 
+    /// <summary>What the undo history last saw of this layer's lights.</summary>
+    internal MacroPad.Core.KeyLights? KnownLights { get; set; }
+
+    /// <summary>A key is being dragged over this layer's tab.</summary>
+    [ObservableProperty] public partial bool IsDropTarget { get; set; }
+
     public MacroPad.Core.KeyLights Lights => new(LightMode, KeyLights.Select(k => k.Rgb).ToList());
 
     [ObservableProperty] public partial IReadOnlyList<PlaceViewModel> Places { get; set; } = [];

@@ -333,6 +333,7 @@ public partial class MainViewModel : ViewModelBase, IDisposable
             l.Arrange(layout);
             return l;
         }).ToList();
+        Track(Layers);
         SelectedLayer = Layers[number - 1];
     }
 
@@ -355,6 +356,7 @@ public partial class MainViewModel : ViewModelBase, IDisposable
             foreach (var slot in layer.All)
                 LoadSlot(slot, read[layer.Number].GetValueOrDefault(slot.Slot, new EmptyBinding()));
         LoadLights(lights);
+        ResetHistory();
         Message = "Read all layers from the pad.";
     }
 

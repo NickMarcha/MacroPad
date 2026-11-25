@@ -12,7 +12,8 @@ ICONS = """
 Keyboard KeyboardOutline MusicNote VolumeHigh Mouse LightningBolt LightbulbOutline Usb Bluetooth PowerPlugOffOutline
 TrayArrowDown TrayArrowUp CogOutline RotateRight RotateLeft PencilOutline GestureTap Plus TrashCanOutline Export Import
 PaletteOutline Monitor HomeAssistant Speaker Update InformationOutline Refresh Dialpad LayersOutline CircleSmall
-ChevronRight Check Close ContentCopy ArrowUDownLeft AccountBoxOutline
+ChevronRight Check Close ContentCopy ArrowUDownLeft AccountBoxOutline Undo Redo ContentCut ContentPaste Eraser
+SwapHorizontal DotsHorizontal
 """.split()
 
 source = Path(sys.argv[1]).read_text(encoding="utf-8")

@@ -12,6 +12,20 @@ namespace MacroPad.App.ViewModels;
 /// <summary>Action: the pad sends a trigger code and MacroPad does the rest (Home Assistant, profile switching).</summary>
 public enum BindingKind { None, Keyboard, Media, Mouse, Action }
 
+/// <summary>
+/// What a slot holds, for copying, moving and undoing: its binding, and for a MacroPad action what the action does
+/// (the binding is then the slot's own trigger code, so it is swapped for the target slot's when pasted elsewhere).
+/// </summary>
+public sealed record SlotContent(Binding Binding, PadAction? Action, bool Inherited = false)
+{
+    public static SlotContent Empty { get; } = new(new EmptyBinding(), null);
+
+    public bool IsAction => Action is not null || Binding is MediaBinding m && Triggers.IsTrigger(m.Usage);
+
+    /// <summary>Does the same (whether it is inherited from the default profile doesn't count).</summary>
+    public bool SameAs(SlotContent other) => Binding.Equals(other.Binding) && Equals(Action, other.Action);
+}
+
 public sealed record Choice<T>(T Value, string Name)
 {
     public override string ToString() => Name;
@@ -61,8 +75,24 @@ public partial class SlotViewModel : ViewModelBase
     /// <summary>Whether the pad can wait between a macro's steps.</summary>
     public bool HasDelay { get; }
 
+    /// <summary>Differs from what is on the pad (and, for an action, from what the profile keeps).</summary>
     [ObservableProperty] public partial bool IsDirty { get; set; }
     [ObservableProperty] public partial bool IsSelected { get; set; }
+
+    /// <summary>Something is being dragged over this slot.</summary>
+    [ObservableProperty] public partial bool IsDropTarget { get; set; }
+
+    /// <summary>Raised after an edit (not after <see cref="Load"/> or <see cref="Show"/>), for undo.</summary>
+    public event Action<SlotViewModel>? Edited;
+
+    // What is on the pad, to tell whether the slot is changed; and what the undo history last saw.
+    SlotContent _saved = SlotContent.Empty;
+    internal SlotContent Known { get; set; } = SlotContent.Empty;
+
+    /// <summary>What the slot holds now.</summary>
+    public SlotContent Content => Kind == BindingKind.Action
+        ? new SlotContent(new MediaBinding(TriggerCode), PadAction, IsInherited)
+        : new SlotContent(Binding, null, IsInherited);
     [ObservableProperty] public partial string Summary { get; set; } = "—";
 
     // The keycap's short label: what it does, and on what.
@@ -137,8 +167,22 @@ public partial class SlotViewModel : ViewModelBase
         _ => new EmptyBinding(),
     };
 
-    /// <summary>Shows a binding read from the device; clears the dirty flag.</summary>
+    /// <summary>Shows a binding read from the device, as what is on the pad.</summary>
     public void Load(Binding binding, PadAction? action = null, bool inherited = false)
+    {
+        Fill(binding, action, inherited);
+        _saved = Known = Content;
+        IsDirty = false;
+    }
+
+    /// <summary>Shows <paramref name="content"/> as an edit that isn't on the pad (unless it is the same as the pad's).</summary>
+    public void Show(SlotContent content)
+    {
+        Fill(content.IsAction ? new MediaBinding(TriggerCode) : content.Binding, content.Action, content.Inherited);
+        IsDirty = !Content.SameAs(_saved);
+    }
+
+    void Fill(Binding binding, PadAction? action, bool inherited)
     {
         _loading = true;
         _unknown = binding as UnknownBinding;
@@ -191,10 +235,13 @@ public partial class SlotViewModel : ViewModelBase
         IsInherited = inherited;
         _loading = false;
         Summary = Describe();
-        IsDirty = false;
     }
 
-    public void MarkSaved() => IsDirty = false;
+    public void MarkSaved()
+    {
+        _saved = Content;
+        IsDirty = false;
+    }
 
     /// <summary>Makes this slot a MacroPad action doing <paramref name="action"/> (an edit: the slot needs writing).</summary>
     public void UseAction(PadAction action)
@@ -247,7 +294,7 @@ public partial class SlotViewModel : ViewModelBase
     protected override void OnPropertyChanged(System.ComponentModel.PropertyChangedEventArgs e)
     {
         base.OnPropertyChanged(e);
-        if (e.PropertyName is nameof(IsDirty) or nameof(IsSelected) or nameof(Summary) or nameof(CapTitle) or nameof(CapDetail) or nameof(IsKeyboard) or nameof(IsMedia) or nameof(IsMouse) or nameof(IsAction) or nameof(IsStepped) or nameof(NeedsTarget) or nameof(NeedsProfile) or nameof(IsInherited)
+        if (e.PropertyName is nameof(IsDirty) or nameof(IsSelected) or nameof(IsDropTarget) or nameof(Summary) or nameof(CapTitle) or nameof(CapDetail) or nameof(IsKeyboard) or nameof(IsMedia) or nameof(IsMouse) or nameof(IsAction) or nameof(IsStepped) or nameof(NeedsTarget) or nameof(NeedsProfile) or nameof(IsInherited)
             or nameof(PickedKey) or nameof(PickCtrl) or nameof(PickShift) or nameof(PickAlt) or nameof(PickWin))
             return;
         if (e.PropertyName == nameof(Kind) && !_loading) _unknown = null;
@@ -260,6 +307,7 @@ public partial class SlotViewModel : ViewModelBase
         // Any edit makes this profile's own action.
         IsInherited = false;
         Summary = Describe();
-        IsDirty = true;
+        IsDirty = !Content.SameAs(_saved);
+        Edited?.Invoke(this);
     }
 }

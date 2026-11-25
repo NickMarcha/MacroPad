@@ -44,7 +44,7 @@
             </ListBox.ItemsPanel>
             <ListBox.ItemTemplate>
                 <DataTemplate x:DataType="vm:LayerViewModel">
-                    <TextBlock Text="{Binding Title}" />
+                    <TextBlock Text="{Binding Title}" Classes.drop="{Binding IsDropTarget}" />
                 </DataTemplate>
             </ListBox.ItemTemplate>
         </ListBox>
@@ -67,7 +67,37 @@
 
         <Grid ColumnDefinitions="Auto,*" IsVisible="{Binding IsConnected}">
             <ScrollViewer>
-                <StackPanel Margin="24" Spacing="20">
+                <StackPanel Margin="24,16,24,24" Spacing="12">
+                    <!-- Editing: on the selected key, or in the Lights view on its colour -->
+                    <StackPanel Orientation="Horizontal" Spacing="2">
+                        <Button Classes="icon" Command="{Binding UndoCommand}" ToolTip.Tip="{Binding UndoTip}" AutomationProperties.Name="Undo">
+                            <PathIcon Data="{StaticResource Icon.Undo}" />
+                        </Button>
+                        <Button Classes="icon" Command="{Binding RedoCommand}" ToolTip.Tip="{Binding RedoTip}" AutomationProperties.Name="Redo">
+                            <PathIcon Data="{StaticResource Icon.Redo}" />
+                        </Button>
+                        <Border Classes="divider" />
+                        <Button Classes="icon" Command="{Binding CopyCommand}" ToolTip.Tip="Copy the selected key (Ctrl+C)" AutomationProperties.Name="Copy">
+                            <PathIcon Data="{StaticResource Icon.ContentCopy}" />
+                        </Button>
+                        <Button Classes="icon" Command="{Binding CutCommand}" ToolTip.Tip="Cut the selected key (Ctrl+X)" AutomationProperties.Name="Cut">
+                            <PathIcon Data="{StaticResource Icon.ContentCut}" />
+                        </Button>
+                        <Button Classes="icon" Command="{Binding PasteCommand}" ToolTip.Tip="Paste onto the selected key (Ctrl+V)" AutomationProperties.Name="Paste">
+                            <PathIcon Data="{StaticResource Icon.ContentPaste}" />
+                        </Button>
+                        <Button Classes="icon" Command="{Binding ClearCommand}" ToolTip.Tip="Clear the selected key (Delete)" AutomationProperties.Name="Clear">
+                            <PathIcon Data="{StaticResource Icon.Eraser}" />
+                        </Button>
+                        <Border Classes="divider" />
+                        <Button Classes="icon" Click="LayerMenu_Click" ToolTip.Tip="Copy, swap or clear the whole layer" AutomationProperties.Name="Layer">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <PathIcon Data="{StaticResource Icon.LayersOutline}" />
+                                <TextBlock Text="Layer" />
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+
                     <Border Classes="card" Padding="20" HorizontalAlignment="Left">
                         <ItemsControl Name="Pad" ItemsSource="{Binding SelectedLayer.Places}"
                                       Width="{Binding SelectedLayer.Width}" Height="{Binding SelectedLayer.Height}">
@@ -85,6 +115,8 @@
                             <ItemsControl.DataTemplates>
                                 <DataTemplate DataType="vm:KeyPlaceViewModel">
                                     <Button Classes="keycap" Classes.selected="{Binding Slot.IsSelected}" Classes.lit="{Binding Light.IsSelected, FallbackValue=False}"
+                                            Classes.drop="{Binding Slot.IsDropTarget}"
+                                            AutomationProperties.Name="{Binding Slot.Label}"
                                             Width="{Binding Size}" Height="{Binding Size}"
                                             Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).SelectSlotCommand}" CommandParameter="{Binding Slot}"
                                             ToolTip.Tip="{Binding Slot.Summary}">
@@ -113,12 +145,12 @@
                                           IsEnabled="{Binding !$parent[Window].((vm:MainViewModel)DataContext).IsLightsMode}"
                                           ToolTip.Tip="Knobs have no lights">
                                         <Grid ColumnDefinitions="*,Auto,*">
-                                            <Button Classes="turn" Classes.selected="{Binding TurnLeft.IsSelected}" HorizontalAlignment="Right"
+                                            <Button Classes="turn" Classes.selected="{Binding TurnLeft.IsSelected}" Classes.drop="{Binding TurnLeft.IsDropTarget}" AutomationProperties.Name="{Binding TurnLeft.Label}" HorizontalAlignment="Right"
                                                     Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).SelectSlotCommand}" CommandParameter="{Binding TurnLeft}"
                                                     ToolTip.Tip="{Binding TurnLeft.Summary, StringFormat='Turn left: {0}'}">
                                                 <PathIcon Data="{StaticResource Icon.RotateLeft}" />
                                             </Button>
-                                            <Button Grid.Column="1" Classes="keycap knob" Classes.selected="{Binding Press.IsSelected}" Width="72" Height="72"
+                                            <Button Grid.Column="1" Classes="keycap knob" Classes.selected="{Binding Press.IsSelected}" Classes.drop="{Binding Press.IsDropTarget}" AutomationProperties.Name="{Binding Press.Label}" Width="72" Height="72"
                                                     Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).SelectSlotCommand}" CommandParameter="{Binding Press}"
                                                     ToolTip.Tip="{Binding Press.Summary, StringFormat='Press: {0}'}">
                                                 <StackPanel Spacing="2" VerticalAlignment="Center" HorizontalAlignment="Center">
@@ -130,7 +162,7 @@
                                                                MaxLines="2" TextTrimming="CharacterEllipsis" MaxWidth="56" />
                                                 </StackPanel>
                                             </Button>
-                                            <Button Grid.Column="2" Classes="turn" Classes.selected="{Binding TurnRight.IsSelected}" HorizontalAlignment="Left"
+                                            <Button Grid.Column="2" Classes="turn" Classes.selected="{Binding TurnRight.IsSelected}" Classes.drop="{Binding TurnRight.IsDropTarget}" AutomationProperties.Name="{Binding TurnRight.Label}" HorizontalAlignment="Left"
                                                     Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).SelectSlotCommand}" CommandParameter="{Binding TurnRight}"
                                                     ToolTip.Tip="{Binding TurnRight.Summary, StringFormat='Turn right: {0}'}">
                                                 <PathIcon Data="{StaticResource Icon.RotateRight}" />
@@ -142,6 +174,8 @@
                             </ItemsControl.DataTemplates>
                         </ItemsControl>
                     </Border>
+                    <TextBlock Classes="note" TextWrapping="Wrap" MaxWidth="420" HorizontalAlignment="Left"
+                               Text="Drag a key onto another to swap them, or hold Ctrl to copy it. Drop it on a layer tab to swap it with the same key there. Right-click a key for more." />
 
                     <!-- Lights on pads that take one mode and colour per layer -->
                     <StackPanel Spacing="8" IsVisible="{Binding HasLayerLights}" MaxWidth="360" HorizontalAlignment="Left">

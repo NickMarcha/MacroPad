@@ -44,6 +44,7 @@ public partial class MainViewModel
         SlotViewModel.ProfileNames.Move(SlotViewModel.ProfileNames.IndexOf(profile.Name), 0);
         // Which keys are inherited, and from where, has changed.
         foreach (var slot in Layers.SelectMany(l => l.All)) LoadSlot(slot, slot.Binding);
+        ResetHistory();
         OnPropertyChanged(nameof(IsEditingDefault));
         OnPropertyChanged(nameof(DefaultNote));
         ProfilesChanged?.Invoke();
@@ -142,6 +143,7 @@ public partial class MainViewModel
         // Show the edited profile's actions on the slots that are actions.
         foreach (var slot in Layers.SelectMany(l => l.All))
             if (!slot.IsDirty) LoadSlot(slot, slot.Binding);
+        ResetHistory();
     }
 
     void LoadSlot(SlotViewModel slot, Binding binding)

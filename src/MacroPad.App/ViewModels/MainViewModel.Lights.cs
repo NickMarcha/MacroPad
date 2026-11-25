@@ -77,6 +77,7 @@ public partial class MainViewModel
     {
         if (SelectedLight is not null) SelectedLight.IsSelected = value;
         if (SelectedSlot is not null) SelectedSlot.IsSelected = !value;
+        PasteCommand.NotifyCanExecuteChanged();
     }
 
     void ShowLightsOf(LayerViewModel? layer)
@@ -104,18 +105,21 @@ public partial class MainViewModel
             if (!lights.TryGetValue(layer.Number, out var l)) continue;
             layer.LightMode = l.Mode;
             for (int i = 0; i < layer.KeyLights.Count; i++) layer.KeyLights[i].Color = KeyLightViewModel.ToColor(l.Colors[i]);
+            layer.KnownLights = layer.Lights;
         }
         ShowLightsOf(SelectedLayer);
         OnPropertyChanged(nameof(LightColor));
     }
 
     // Dragging across the colour picker changes the colour many times a second; the pad gets the latest after a pause.
-    CancellationTokenSource? _lightWrite;
+    readonly Dictionary<LayerViewModel, CancellationTokenSource> _lightWrites = [];
 
+    /// <summary>Writes the layer's lights to the pad shortly, and records the change for undo.</summary>
     void QueueLightWrite(LayerViewModel layer)
     {
-        _lightWrite?.Cancel();
-        var cancel = _lightWrite = new CancellationTokenSource();
+        LightsEdited(layer);
+        if (_lightWrites.TryGetValue(layer, out var old)) old.Cancel();
+        var cancel = _lightWrites[layer] = new CancellationTokenSource();
         var device = _device;
         _ = Task.Delay(200, cancel.Token).ContinueWith(async t =>
         {
